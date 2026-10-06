@@ -1,0 +1,6 @@
+{
+  "name": "Epoch Data Intelligence - Interactive Business Dashboard",
+  "description": "Convert Excel files into live, interactive Power BI-style dashboards with dynamic cross-filtering, KPIs, intelligent charts, and filtered Excel export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
