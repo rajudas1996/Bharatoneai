@@ -9,13 +9,13 @@ import {
   Music, 
   Database, 
   MapPin, 
-  Layers,
-  Sparkles,
-  ChevronRight,
-  ExternalLink
+  FolderGit2, 
+  Settings, 
+  HelpCircle,
+  Sparkles
 } from 'lucide-react';
-import { EpochLogo } from './EpochLogo';
-import { ToolId } from './tools/HomePage';
+import { BharatLogo } from './BharatLogo';
+import { ToolId } from '../types/tools';
 import { Dataset } from '../types/dashboard';
 
 interface SidebarProps {
@@ -43,13 +43,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="w-64 bg-white text-slate-800 flex flex-col shrink-0 border-r border-slate-200 z-20 select-none shadow-2xs">
-      {/* Brand Header with Epoch Logo */}
+      {/* Brand Header with BharatAI Logo matching reference image */}
       <div className="p-4 border-b border-slate-100">
-        <EpochLogo className="h-11 w-full" showTagline={true} />
-        <div className="text-[11px] text-slate-500 font-semibold mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
-          <span className="truncate">Enterprise AI Platform</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-        </div>
+        <BharatLogo className="h-10 w-full" showTagline={true} />
       </div>
 
       {/* Primary Navigation */}
@@ -93,17 +89,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
+      {/* Bottom Secondary Links from Screenshot */}
+      <div className="p-3 border-t border-slate-100 space-y-0.5 text-slate-500 text-xs">
+        <button
+          onClick={() => alert('Projects workspace: 4 active AI projects')}
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+        >
+          <FolderGit2 className="w-3.5 h-3.5" />
+          <span>Projects</span>
+        </button>
+        <button
+          onClick={() => alert('Platform Settings & Preferences')}
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Settings</span>
+        </button>
+        <button
+          onClick={() => alert('BharatAI Documentation & Support')}
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+        >
+          <HelpCircle className="w-3.5 h-3.5" />
+          <span>Help & Support</span>
+        </button>
+      </div>
+
       {/* Database Quick Status Badge */}
-      <div className="p-3.5 border-t border-slate-100 bg-slate-50/70 text-xs mt-auto">
-        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+      <div className="p-3 border-t border-slate-100 bg-slate-50/70 text-xs">
+        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-0.5">
           <span className="font-semibold flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            AI Engine Online
+            AI Platform Online
           </span>
           <span className="font-mono text-[10px] text-slate-400">v3.4.2</span>
         </div>
         <div className="text-[10px] text-slate-400 truncate">
-          Red & White Enterprise Suite
+          BharatAI Enterprise Suite
         </div>
       </div>
     </aside>

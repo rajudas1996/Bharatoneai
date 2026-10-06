@@ -7,7 +7,7 @@ import {
   ChevronRight,
   BarChart3
 } from 'lucide-react';
-import { ToolId } from './tools/HomePage';
+import { ToolId } from '../types/tools';
 
 interface HeaderProps {
   activeTool: ToolId;
@@ -41,12 +41,12 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-500 shrink-0">
           <button 
             onClick={() => onSelectTool('home')}
-            className="hover:text-red-600 transition-colors"
+            className="hover:text-red-600 transition-colors font-bold text-slate-800"
           >
-            Epoch AI
+            BharatAI
           </button>
           <ChevronRight className="w-3 h-3 text-slate-400" />
-          <span className="text-slate-900 font-bold">{TOOL_NAMES[activeTool]}</span>
+          <span className="text-red-600 font-bold">{TOOL_NAMES[activeTool]}</span>
         </div>
 
         {/* Search Bar */}
@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Search across ${TOOL_NAMES[activeTool]} or keywords...`}
+            placeholder="Search tools, create anything..."
             className="w-full pl-9 pr-8 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white text-xs border border-slate-200 focus:border-red-500 rounded-lg outline-none transition-all placeholder:text-slate-400 text-slate-800"
           />
           {searchQuery && (

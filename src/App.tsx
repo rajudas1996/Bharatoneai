@@ -7,7 +7,8 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
-import { HomePage, ToolId } from './components/tools/HomePage';
+import { HomePage } from './components/tools/HomePage';
+import { ToolId } from './types/tools';
 import { LiveDashboardView } from './components/LiveDashboardView';
 import { ImageCreatorTool } from './components/tools/ImageCreatorTool';
 import { ImageEditorTool } from './components/tools/ImageEditorTool';
