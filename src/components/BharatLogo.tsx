@@ -2,56 +2,76 @@ import React from 'react';
 
 interface BharatLogoProps {
   className?: string;
-  showTagline?: boolean;
-  inverted?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  showSubtitle?: boolean;
 }
 
 export const BharatLogo: React.FC<BharatLogoProps> = ({
-  className = 'h-9',
-  showTagline = false,
-  inverted = false,
+  className = '',
+  size = 'md',
+  showSubtitle = false,
 }) => {
+  const iconHeight = size === 'sm' ? 24 : size === 'lg' ? 36 : 30;
+
   return (
     <div className={`flex items-center gap-2.5 select-none ${className}`}>
-      {/* Red Geometric / Origami 'A' Symbol from screenshot */}
-      <div className="relative shrink-0 flex items-center justify-center">
-        <svg
-          viewBox="0 0 100 100"
-          className="w-8 h-8 drop-shadow-2xs"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Left leg of A */}
-          <path
-            d="M50 12 L18 84 L36 84 L50 48 L64 84 L82 84 Z"
-            fill="#dc2626"
-          />
-          {/* Inner facet / ribbon fold */}
-          <path
-            d="M50 12 L36 84 L50 56 Z"
-            fill="#b91c1c"
-          />
-          {/* Crossbar accent */}
-          <path
-            d="M32 64 L68 64 L62 76 L38 76 Z"
-            fill="#ef4444"
-          />
-        </svg>
-      </div>
+      {/* Stylized Red Geometric 'A' Ribbon / Delta Icon from reference image */}
+      <svg
+        height={iconHeight}
+        viewBox="0 0 40 40"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="shrink-0 drop-shadow-2xs"
+      >
+        <defs>
+          <linearGradient id="bharatRed1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="100%" stopColor="#dc2626" />
+          </linearGradient>
+          <linearGradient id="bharatRed2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#dc2626" />
+            <stop offset="100%" stopColor="#b91c1c" />
+          </linearGradient>
+          <linearGradient id="bharatRed3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#b91c1c" />
+            <stop offset="100%" stopColor="#7f1d1d" />
+          </linearGradient>
+        </defs>
 
-      {/* Brand Typography */}
-      <div className="flex flex-col justify-center leading-none">
-        <div className="flex items-center tracking-tight">
-          <span className={`text-xl font-extrabold ${inverted ? 'text-white' : 'text-slate-900'}`}>
-            Bharat
-          </span>
-          <span className="text-xl font-extrabold text-red-600">
-            AI
-          </span>
+        {/* Left diagonal ribbon */}
+        <path
+          d="M 20 4 L 5 36 L 13 36 L 20 20 L 27 36 L 35 36 Z"
+          fill="url(#bharatRed1)"
+        />
+        {/* Inner cross facet notch */}
+        <path
+          d="M 20 11 L 11 31 L 17 31 L 20 23 L 23 31 L 29 31 Z"
+          fill="#ffffff"
+          opacity="0.95"
+        />
+        {/* Central red core */}
+        <path
+          d="M 20 15 L 14 29 L 26 29 Z"
+          fill="url(#bharatRed2)"
+        />
+        {/* Diagonal dynamic slash accent */}
+        <path
+          d="M 12 36 L 20 20 L 22 24 L 16 36 Z"
+          fill="url(#bharatRed3)"
+          opacity="0.6"
+        />
+      </svg>
+
+      {/* Bold Red "Bharat 1 AI" Typography */}
+      <div className="flex flex-col leading-none">
+        <div className="flex items-center text-red-600 font-extrabold tracking-tight text-xl font-sans">
+          <span>Bharat</span>
+          <span className="text-red-700 ml-1">1</span>
+          <span className="text-red-600 ml-1">AI</span>
         </div>
-        {showTagline && (
-          <span className={`text-[8.5px] font-medium tracking-wider mt-0.5 ${inverted ? 'text-slate-300' : 'text-slate-500'}`}>
-            Create • Build • Automate • For a Smarter India
+        {showSubtitle && (
+          <span className="text-[10px] text-slate-400 font-medium tracking-wide mt-0.5">
+            Create • Analyze • Automate
           </span>
         )}
       </div>

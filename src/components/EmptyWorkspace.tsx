@@ -14,7 +14,6 @@ import {
 import { Dataset } from '../types/dashboard';
 import { parseExcelFile, exportFilteredToExcel } from '../utils/excelParser';
 import { getDemoDataset } from '../data/demoData';
-import { EpochLogo } from './EpochLogo';
 import * as XLSX from 'xlsx';
 
 interface EmptyWorkspaceProps {
@@ -83,17 +82,17 @@ export const EmptyWorkspace: React.FC<EmptyWorkspaceProps> = ({ onDatasetLoaded 
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
-      {/* Header Banner with Epoch Logo */}
-      <div className="text-center mb-8 flex flex-col items-center">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-semibold mb-4">
+      {/* Header Banner */}
+      <div className="text-center mb-6 flex flex-col items-center">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-semibold mb-3">
           <ShieldCheck className="w-3.5 h-3.5 text-red-600" />
           <span>Client-Side Processing · 100% Data Confidentiality</span>
         </div>
-        <div className="mb-2">
-          <EpochLogo className="h-16" showTagline={true} />
-        </div>
-        <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto mt-2 font-medium">
-          Interactive Master Lead Dashboard for Insurance Broking & Risk Underwriting
+        <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+          Upload Excel File to Launch Live Dashboard
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto mt-1 font-normal">
+          Automatically detect columns, compute KPIs, and interact with Power BI-style charts in real time.
         </p>
       </div>
 

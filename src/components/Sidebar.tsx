@@ -1,131 +1,289 @@
 import React from 'react';
 import { 
-  Home,
+  Home, 
   BarChart3, 
   Image as ImageIcon, 
-  Wand2, 
+  SlidersHorizontal, 
   Film, 
   Video, 
   Music, 
   Database, 
   MapPin, 
-  FolderGit2, 
+  Sparkles, 
+  Folder, 
   Settings, 
   HelpCircle,
-  Sparkles
+  FileSpreadsheet,
+  RotateCcw,
+  Table2,
+  Layers
 } from 'lucide-react';
 import { BharatLogo } from './BharatLogo';
-import { ToolId } from '../types/tools';
 import { Dataset } from '../types/dashboard';
 
+export type MainNavTab = 
+  | 'home' 
+  | 'dashboard' 
+  | 'table' 
+  | 'schema' 
+  | 'image_create' 
+  | 'image_edit' 
+  | 'animate_image' 
+  | 'text_to_video' 
+  | 'music_gen' 
+  | 'database_auth' 
+  | 'maps_data' 
+  | 'all_tools'
+  | 'projects'
+  | 'settings'
+  | 'help';
+
 interface SidebarProps {
-  activeTool: ToolId;
-  onSelectTool: (tool: ToolId) => void;
-  dataset?: Dataset | null;
+  currentTab: MainNavTab;
+  onSelectTab: (tab: MainNavTab) => void;
+  dataset: Dataset | null;
+  filteredCount: number;
+  onOpenUpload: () => void;
+  onTriggerReset: () => void;
+  onSelectSheet: (sheetName: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  activeTool,
-  onSelectTool,
+  currentTab,
+  onSelectTab,
   dataset,
+  filteredCount,
+  onOpenUpload,
+  onTriggerReset,
+  onSelectSheet,
 }) => {
-  const navItems: { id: ToolId; label: string; icon: any; badge?: string; isCore?: boolean }[] = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'dashboard', label: 'Live Dashboard', icon: BarChart3, badge: dataset ? `${dataset.totalRows} rows` : 'Active', isCore: true },
-    { id: 'image-create', label: 'Image Create', icon: ImageIcon },
-    { id: 'image-edit', label: 'Image Edit', icon: Wand2 },
-    { id: 'image-to-video', label: 'Animate Image to Video', icon: Film },
-    { id: 'text-to-video', label: 'Text to Video', icon: Video },
-    { id: 'music-generation', label: 'Music Generation', icon: Music },
-    { id: 'database-auth', label: 'Database & Auth', icon: Database },
-    { id: 'maps-data', label: 'Maps Data', icon: MapPin },
-  ];
+  const isDashboardActive = currentTab === 'dashboard' || currentTab === 'table' || currentTab === 'schema';
 
   return (
-    <aside className="w-64 bg-white text-slate-800 flex flex-col shrink-0 border-r border-slate-200 z-20 select-none shadow-2xs">
-      {/* Brand Header with BharatAI Logo matching reference image */}
-      <div className="p-4 border-b border-slate-100">
-        <BharatLogo className="h-10 w-full" showTagline={true} />
+    <aside className="w-64 bg-white text-slate-800 flex flex-col shrink-0 border-r border-slate-200 z-20 select-none shadow-2xs h-full">
+      {/* Brand Header with Bold Red "Bharat 1 AI" Logo */}
+      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+        <BharatLogo size="md" showSubtitle={false} />
       </div>
 
-      {/* Primary Navigation */}
-      <div className="p-3 space-y-1 flex-1 overflow-y-auto">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-1 mb-1">
-          Navigation & Tools
-        </div>
+      {/* Primary Navigation List matching reference image */}
+      <div className="p-3 space-y-1 overflow-y-auto flex-1 no-scrollbar">
+        {/* 1. Home (Red active pill) */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('home')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            currentTab === 'home'
+              ? 'bg-red-600 text-white shadow-xs'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+          }`}
+        >
+          <Home className={`w-4 h-4 shrink-0 ${currentTab === 'home' ? 'text-white' : 'text-slate-500'}`} />
+          <span>Home</span>
+        </button>
 
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTool === item.id;
+        {/* 2. Live Dashboard */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('dashboard')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            isDashboardActive
+              ? 'bg-red-50 text-red-600 font-bold border border-red-200/60'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <BarChart3 className={`w-4 h-4 shrink-0 ${isDashboardActive ? 'text-red-600' : 'text-slate-500'}`} />
+          <span className="flex-1 text-left">Live Dashboard</span>
+          {dataset && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-100" title="Active Excel Loaded" />
+          )}
+        </button>
 
-          return (
+        {/* Sub-navigation items when Live Dashboard has an active dataset */}
+        {isDashboardActive && dataset && (
+          <div className="pl-4 pr-1 py-1 space-y-0.5 border-l-2 border-red-200 ml-4 my-1">
             <button
-              key={item.id}
-              onClick={() => onSelectTool(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${
-                isActive
-                  ? 'bg-red-50 text-red-600 shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              onClick={() => onSelectTab('dashboard')}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] transition-colors ${
+                currentTab === 'dashboard'
+                  ? 'bg-red-100/70 text-red-800 font-bold'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-red-600' : 'text-slate-400'}`} />
-              <span className="flex-1 text-left truncate">{item.label}</span>
-
-              {item.isCore && (
-                <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
-                  isActive ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700'
-                }`}>
-                  Core
-                </span>
-              )}
-
-              {item.badge && !item.isCore && (
-                <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono">
-                  {item.badge}
-                </span>
-              )}
+              <span>Charts & KPIs</span>
             </button>
-          );
-        })}
+            <button
+              onClick={() => onSelectTab('schema')}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] transition-colors ${
+                currentTab === 'schema'
+                  ? 'bg-red-100/70 text-red-800 font-bold'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3 h-3" />
+              <span>Detected Headers</span>
+              <span className="ml-auto font-mono text-[9px] bg-slate-100 px-1 rounded">
+                {dataset.totalColumns}
+              </span>
+            </button>
+            <button
+              onClick={() => onSelectTab('table')}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] transition-colors ${
+                currentTab === 'table'
+                  ? 'bg-red-100/70 text-red-800 font-bold'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Table2 className="w-3 h-3" />
+              <span>Data Table</span>
+              <span className="ml-auto font-mono text-[9px] bg-slate-100 px-1 rounded">
+                {filteredCount}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* 3. Image Creator */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('image_create')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            currentTab === 'image_create'
+              ? 'bg-purple-50 text-purple-700 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <ImageIcon className="w-4 h-4 shrink-0 text-slate-500" />
+          <span>Image Creator</span>
+        </button>
+
+        {/* 4. Image Edit */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('image_edit')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            currentTab === 'image_edit'
+              ? 'bg-emerald-50 text-emerald-700 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <SlidersHorizontal className="w-4 h-4 shrink-0 text-slate-500" />
+          <span>Image Edit</span>
+        </button>
+
+        {/* 5. Animate Image to Video */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('animate_image')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            currentTab === 'animate_image'
+              ? 'bg-amber-50 text-amber-700 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <Film className="w-4 h-4 shrink-0 text-slate-500" />
+          <span>Animate Image to Video</span>
+        </button>
+
+        {/* 6. Text to Video */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('text_to_video')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            currentTab === 'text_to_video'
+              ? 'bg-blue-50 text-blue-700 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <Video className="w-4 h-4 shrink-0 text-slate-500" />
+          <span>Text to Video</span>
+        </button>
+
+        {/* 7. Music Generation */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('music_gen')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            currentTab === 'music_gen'
+              ? 'bg-purple-50 text-purple-700 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <Music className="w-4 h-4 shrink-0 text-slate-500" />
+          <span>Music Generation</span>
+        </button>
+
+        {/* 8. Database & Auth */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('database_auth')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            currentTab === 'database_auth'
+              ? 'bg-red-50 text-red-700 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <Database className="w-4 h-4 shrink-0 text-slate-500" />
+          <span>Database & Auth</span>
+        </button>
+
+        {/* 9. Maps Data */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('maps_data')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            currentTab === 'maps_data'
+              ? 'bg-emerald-50 text-emerald-700 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <MapPin className="w-4 h-4 shrink-0 text-slate-500" />
+          <span>Maps Data</span>
+        </button>
+
+        {/* 10. All Tools */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('all_tools')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all ${
+            currentTab === 'all_tools'
+              ? 'bg-slate-100 text-slate-900 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 shrink-0 text-slate-500" />
+          <span>All Tools</span>
+        </button>
       </div>
 
-      {/* Bottom Secondary Links from Screenshot */}
-      <div className="p-3 border-t border-slate-100 space-y-0.5 text-slate-500 text-xs">
+      {/* Bottom Navigation Section: Projects, Settings, Help & Support */}
+      <div className="p-3 border-t border-slate-100 space-y-0.5 bg-white">
         <button
-          onClick={() => alert('Projects workspace: 4 active AI projects')}
-          className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          type="button"
+          onClick={() => onSelectTab('projects')}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
         >
-          <FolderGit2 className="w-3.5 h-3.5" />
+          <Folder className="w-4 h-4 shrink-0 text-slate-400" />
           <span>Projects</span>
         </button>
+
         <button
-          onClick={() => alert('Platform Settings & Preferences')}
-          className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          type="button"
+          onClick={() => onSelectTab('settings')}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
         >
-          <Settings className="w-3.5 h-3.5" />
+          <Settings className="w-4 h-4 shrink-0 text-slate-400" />
           <span>Settings</span>
         </button>
+
         <button
-          onClick={() => alert('BharatAI Documentation & Support')}
-          className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          type="button"
+          onClick={() => onSelectTab('help')}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
         >
-          <HelpCircle className="w-3.5 h-3.5" />
+          <HelpCircle className="w-4 h-4 shrink-0 text-slate-400" />
           <span>Help & Support</span>
         </button>
-      </div>
-
-      {/* Database Quick Status Badge */}
-      <div className="p-3 border-t border-slate-100 bg-slate-50/70 text-xs">
-        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-0.5">
-          <span className="font-semibold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            AI Platform Online
-          </span>
-          <span className="font-mono text-[10px] text-slate-400">v3.4.2</span>
-        </div>
-        <div className="text-[10px] text-slate-400 truncate">
-          BharatAI Enterprise Suite
-        </div>
       </div>
     </aside>
   );
