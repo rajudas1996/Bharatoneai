@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTriggerReset,
   onSelectSheet,
 }) => {
-  const isDashboardActive = currentTab === 'dashboard' || currentTab === 'table' || currentTab === 'schema';
+  const isDashboardActive = currentTab === 'dashboard';
 
   return (
     <aside className="w-64 bg-white text-slate-800 flex flex-col shrink-0 border-r border-slate-200 z-20 select-none shadow-2xs h-full">
@@ -98,50 +98,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-100" title="Active Excel Loaded" />
           )}
         </button>
-
-        {/* Sub-navigation items when Live Dashboard has an active dataset */}
-        {isDashboardActive && dataset && (
-          <div className="pl-4 pr-1 py-1 space-y-0.5 border-l-2 border-red-200 ml-4 my-1">
-            <button
-              onClick={() => onSelectTab('dashboard')}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] transition-colors ${
-                currentTab === 'dashboard'
-                  ? 'bg-red-100/70 text-red-800 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <span>Charts & KPIs</span>
-            </button>
-            <button
-              onClick={() => onSelectTab('schema')}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] transition-colors ${
-                currentTab === 'schema'
-                  ? 'bg-red-100/70 text-red-800 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <Layers className="w-3 h-3" />
-              <span>Detected Headers</span>
-              <span className="ml-auto font-mono text-[9px] bg-slate-100 px-1 rounded">
-                {dataset.totalColumns}
-              </span>
-            </button>
-            <button
-              onClick={() => onSelectTab('table')}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] transition-colors ${
-                currentTab === 'table'
-                  ? 'bg-red-100/70 text-red-800 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <Table2 className="w-3 h-3" />
-              <span>Data Table</span>
-              <span className="ml-auto font-mono text-[9px] bg-slate-100 px-1 rounded">
-                {filteredCount}
-              </span>
-            </button>
-          </div>
-        )}
 
         {/* 3. Image Creator */}
         <button

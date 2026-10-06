@@ -1,265 +1,461 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Wand2, 
-  Upload, 
+  SlidersHorizontal, 
+  RotateCw, 
+  FlipHorizontal, 
+  FlipVertical, 
   Download, 
-  RefreshCw, 
+  RotateCcw, 
+  Upload, 
   Sparkles, 
+  Wand2, 
+  Sun, 
+  Contrast, 
+  Droplets, 
   Eye, 
-  Columns, 
-  Sliders, 
-  RotateCcw,
-  Check,
-  Zap
+  Check, 
+  Undo2,
+  Image as ImageIcon
 } from 'lucide-react';
 
-const PRESET_INSTRUCTIONS = [
-  'Change lighting to warm golden hour studio backlight with subtle bokeh',
-  'Replace the background with a minimalist high-rise corporate office',
-  'Enhance clarity, boost HDR dynamic range, and sharpen fine details',
-  'Apply professional black and white high-contrast editorial look',
-  'Add modern holographic user interface HUD overlay elements',
-];
+interface FilterPreset {
+  id: string;
+  name: string;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  sepia: number;
+  grayscale: number;
+  hue: number;
+}
 
-const SAMPLE_IMAGES = [
-  {
-    name: 'Corporate Office',
-    before: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1000&q=80',
-    after: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    name: 'Executive Portrait',
-    before: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1000&q=80',
-    after: 'https://images.unsplash.com/photo-1580894732444-8ecded7900cd?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    name: 'Modern Building',
-    before: 'https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?auto=format&fit=crop&w=1000&q=80',
-    after: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1000&q=80',
-  },
+const PRESET_FILTERS: FilterPreset[] = [
+  { id: 'normal', name: 'Original', brightness: 100, contrast: 100, saturation: 100, sepia: 0, grayscale: 0, hue: 0 },
+  { id: 'vivid_india', name: 'Vivid Bharat', brightness: 110, contrast: 125, saturation: 145, sepia: 5, grayscale: 0, hue: 10 },
+  { id: 'golden_sunset', name: 'Golden Hour', brightness: 105, contrast: 115, saturation: 130, sepia: 25, grayscale: 0, hue: 15 },
+  { id: 'cyberpunk', name: 'Cyber Neon', brightness: 115, contrast: 135, saturation: 160, sepia: 0, grayscale: 0, hue: 280 },
+  { id: 'noir', name: 'Film Noir B&W', brightness: 105, contrast: 150, saturation: 0, sepia: 0, grayscale: 100, hue: 0 },
+  { id: 'vintage', name: 'Vintage 1970s', brightness: 95, contrast: 110, saturation: 85, sepia: 40, grayscale: 0, hue: 350 },
+  { id: 'emerald', name: 'Emerald Pop', brightness: 105, contrast: 120, saturation: 140, sepia: 0, grayscale: 0, hue: 90 },
 ];
 
 export const ImageEditorTool: React.FC = () => {
-  const [instruction, setInstruction] = useState(PRESET_INSTRUCTIONS[0]);
-  const [currentSampleIndex, setCurrentSampleIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<'split' | 'before' | 'after'>('split');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [intensity, setIntensity] = useState(80);
+  // Current edit parameters
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [saturation, setSaturation] = useState(100);
+  const [sepia, setSepia] = useState(0);
+  const [grayscale, setGrayscale] = useState(0);
+  const [blur, setBlur] = useState(0);
+  const [hue, setHue] = useState(0);
 
-  const sample = SAMPLE_IMAGES[currentSampleIndex];
+  // Geometric transforms
+  const [rotation, setRotation] = useState(0);
+  const [flipH, setFlipH] = useState(false);
+  const [flipV, setFlipV] = useState(false);
 
-  const handleApplyEdit = () => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setViewMode('after');
-    }, 1200);
+  // Active preset
+  const [activePreset, setActivePreset] = useState('normal');
+
+  // Image source
+  const [imageSrc, setImageSrc] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Initialize with a high quality generated sample image
+  useEffect(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 500;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Scenic illustration
+      const grad = ctx.createLinearGradient(0, 0, 800, 500);
+      grad.addColorStop(0, '#1e1b4b');
+      grad.addColorStop(0.5, '#4338ca');
+      grad.addColorStop(1, '#e11d48');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 800, 500);
+
+      // Glowing Sun
+      const sunGrad = ctx.createRadialGradient(400, 260, 0, 400, 260, 180);
+      sunGrad.addColorStop(0, '#fef08a');
+      sunGrad.addColorStop(0.4, '#f97316');
+      sunGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = sunGrad;
+      ctx.beginPath();
+      ctx.arc(400, 260, 180, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Architecture silhouettes
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(0, 500);
+      ctx.lineTo(0, 360);
+      ctx.lineTo(150, 310);
+      ctx.lineTo(260, 380);
+      ctx.lineTo(400, 240);
+      ctx.lineTo(540, 380);
+      ctx.lineTo(650, 320);
+      ctx.lineTo(800, 370);
+      ctx.lineTo(800, 500);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px Inter, system-ui, sans-serif';
+      ctx.fillText('Bharat 1 AI Studio • Studio Asset', 40, 70);
+      ctx.font = '14px Inter, system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillText('Ready for filters, enhancement, rotation, and export', 40, 96);
+
+      setImageSrc(canvas.toDataURL('image/png'));
+    }
+  }, []);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setImageSrc(event.target.result as string);
+          handleResetAll();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleApplyPreset = (preset: FilterPreset) => {
+    setActivePreset(preset.id);
+    setBrightness(preset.brightness);
+    setContrast(preset.contrast);
+    setSaturation(preset.saturation);
+    setSepia(preset.sepia);
+    setGrayscale(preset.grayscale);
+    setHue(preset.hue);
+  };
+
+  const handleResetAll = () => {
+    setBrightness(100);
+    setContrast(100);
+    setSaturation(100);
+    setSepia(0);
+    setGrayscale(0);
+    setBlur(0);
+    setHue(0);
+    setRotation(0);
+    setFlipH(false);
+    setFlipV(false);
+    setActivePreset('normal');
+  };
+
+  const handleAutoEnhance = () => {
+    setBrightness(108);
+    setContrast(118);
+    setSaturation(125);
+    setSepia(0);
+    setGrayscale(0);
+    setHue(5);
+    setActivePreset('auto_ai');
+  };
+
+  // Filter style string for CSS preview
+  const filterString = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) sepia(${sepia}%) grayscale(${grayscale}%) blur(${blur}px) hue-rotate(${hue}deg)`;
+
+  // Export processed image via canvas
+  const handleDownload = () => {
+    if (!imageSrc) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const is90or270 = rotation % 180 !== 0;
+      canvas.width = is90or270 ? img.height : img.width;
+      canvas.height = is90or270 ? img.width : img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.filter = filterString;
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      const link = document.createElement('a');
+      link.download = `bharat1-edited-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.src = imageSrc;
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-6 max-w-7xl mx-auto space-y-6 select-none">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-extrabold text-slate-900">AI Image Editor</h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-              Instruction-Guided Inpainting
-            </span>
+    <div className="max-w-7xl mx-auto space-y-6 pb-12 animate-in fade-in duration-200">
+      {/* Page Header */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+            <SlidersHorizontal className="w-6 h-6 text-white" />
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Modify existing photos by entering natural language edit instructions
-          </p>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Image Edit & Enhance</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">
+                Studio Grade
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500">
+              Apply real-time photo filters, color grading, geometric transforms, and AI auto-enhancements
+            </p>
+          </div>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept="image/*"
+            className="hidden"
+          />
           <button
-            onClick={() => setViewMode('split')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-              viewMode === 'split' ? 'bg-white text-red-600 shadow-2xs' : 'text-slate-600'
-            }`}
+            onClick={() => fileInputRef.current?.click()}
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <Columns className="w-3.5 h-3.5" />
-            <span>Side-by-Side</span>
+            <Upload className="w-3.5 h-3.5" />
+            <span>Upload Photo</span>
           </button>
+
           <button
-            onClick={() => setViewMode('before')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-              viewMode === 'before' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
-            }`}
+            onClick={handleAutoEnhance}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <span>Original</span>
+            <Wand2 className="w-3.5 h-3.5" />
+            <span>AI Auto-Enhance</span>
           </button>
+
           <button
-            onClick={() => setViewMode('after')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-              viewMode === 'after' ? 'bg-white text-red-600 shadow-2xs' : 'text-slate-600'
-            }`}
+            onClick={handleDownload}
+            className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <span>Edited Result</span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Image</span>
           </button>
         </div>
       </div>
 
-      {/* Main Grid */}
+      {/* Main Grid: Controls Left, Viewport Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Form: Instructions & Presets (4 cols) */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-5">
-          {/* Instruction Input */}
-          <div>
-            <label className="text-xs font-bold text-slate-800 block mb-1.5">
-              Editing Instruction
-            </label>
-            <textarea
-              rows={3}
-              value={instruction}
-              onChange={(e) => setInstruction(e.target.value)}
-              placeholder="Tell the AI what changes or modifications to apply..."
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-red-500 outline-none transition-all resize-none leading-relaxed"
-            />
-
-            {/* Quick Inspiration Pills */}
-            <div className="space-y-1.5 mt-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Quick Edit Commands:
-              </span>
-              {PRESET_INSTRUCTIONS.map((p, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setInstruction(p)}
-                  className="w-full text-left text-[11px] p-2 rounded-lg bg-slate-50 hover:bg-red-50 hover:text-red-700 text-slate-600 border border-slate-200/60 transition-colors truncate"
-                >
-                  &ldquo;{p}&rdquo;
-                </button>
-              ))}
+        {/* Left Column: Sliders & Transforms (5 cols) */}
+        <div className="lg:col-span-5 space-y-5">
+          {/* 1. Preset Filters */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800">Filter Presets</label>
+              <button
+                onClick={handleResetAll}
+                className="text-[11px] text-red-600 hover:underline font-semibold flex items-center gap-1"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset All</span>
+              </button>
             </div>
-          </div>
 
-          {/* Edit Strength / Intensity */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-800">Modification Strength</label>
-              <span className="text-xs font-mono font-bold text-red-600">{intensity}%</span>
-            </div>
-            <input
-              type="range"
-              min="20"
-              max="100"
-              value={intensity}
-              onChange={(e) => setIntensity(Number(e.target.value))}
-              className="w-full accent-red-600 cursor-pointer"
-            />
-          </div>
-
-          {/* Sample Switcher */}
-          <div>
-            <label className="text-xs font-bold text-slate-800 block mb-1.5">Sample Input Images</label>
-            <div className="grid grid-cols-3 gap-2">
-              {SAMPLE_IMAGES.map((s, idx) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PRESET_FILTERS.map((preset) => (
                 <button
-                  key={idx}
-                  onClick={() => {
-                    setCurrentSampleIndex(idx);
-                    setViewMode('split');
-                  }}
-                  className={`relative rounded-lg overflow-hidden border aspect-video group ${
-                    currentSampleIndex === idx ? 'ring-2 ring-red-600 border-red-600' : 'border-slate-200'
+                  key={preset.id}
+                  onClick={() => handleApplyPreset(preset)}
+                  className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                    activePreset === preset.id
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-2xs ring-2 ring-emerald-600/20'
+                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
                   }`}
                 >
-                  <img src={s.before} alt={s.name} className="w-full h-full object-cover" />
-                  <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-bold p-0.5 truncate text-center">
-                    {s.name}
-                  </span>
+                  {preset.name}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Execute CTA */}
-          <button
-            onClick={handleApplyEdit}
-            disabled={isProcessing || !instruction.trim()}
-            className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]"
-          >
-            {isProcessing ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Applying Semantic Edits...</span>
-              </>
-            ) : (
-              <>
-                <Wand2 className="w-4 h-4" />
-                <span>Apply Edits to Image</span>
-              </>
-            )}
-          </button>
-        </div>
+          {/* 2. Color & Tone Adjustments */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
+            <h2 className="text-xs font-bold text-slate-800">Color & Tone Sliders</h2>
 
-        {/* Right Canvas: Before vs After (8 cols) */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col justify-between min-h-[500px]">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <span className="text-xs font-bold text-slate-900">
-                Visual Inspection View • {sample.name}
-              </span>
-              <a
-                href={sample.after}
-                download="edited-output.jpg"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Result</span>
-              </a>
+            {/* Brightness */}
+            <div>
+              <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                <span className="font-medium flex items-center gap-1.5">
+                  <Sun className="w-3.5 h-3.5 text-amber-500" /> Brightness
+                </span>
+                <span className="font-mono text-slate-500">{brightness}%</span>
+              </div>
+              <input
+                type="range"
+                min="30"
+                max="180"
+                value={brightness}
+                onChange={(e) => setBrightness(parseInt(e.target.value))}
+                className="w-full accent-emerald-600"
+              />
             </div>
 
-            {/* Display Canvas */}
-            {isProcessing ? (
-              <div className="h-80 bg-slate-950 rounded-xl flex flex-col items-center justify-center text-white space-y-3">
-                <div className="w-10 h-10 border-3 border-red-500 border-t-transparent rounded-full animate-spin" />
-                <div className="text-xs font-bold">Processing Instruction: &ldquo;{instruction}&rdquo;</div>
-                <div className="text-[10px] text-slate-400">Re-rendering neural radiance field layers...</div>
+            {/* Contrast */}
+            <div>
+              <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                <span className="font-medium flex items-center gap-1.5">
+                  <Contrast className="w-3.5 h-3.5 text-slate-600" /> Contrast
+                </span>
+                <span className="font-mono text-slate-500">{contrast}%</span>
               </div>
-            ) : viewMode === 'split' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Before */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-500">
-                    <span>Original Before</span>
-                    <span className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.2 rounded">RAW</span>
-                  </div>
-                  <div className="rounded-xl overflow-hidden border border-slate-200 aspect-4/3 bg-slate-100">
-                    <img src={sample.before} alt="Original" className="w-full h-full object-cover" />
-                  </div>
-                </div>
+              <input
+                type="range"
+                min="30"
+                max="200"
+                value={contrast}
+                onChange={(e) => setContrast(parseInt(e.target.value))}
+                className="w-full accent-emerald-600"
+              />
+            </div>
 
-                {/* After */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-bold text-red-600">
-                    <span>AI Edited After</span>
-                    <span className="text-[10px] font-mono bg-red-100 text-red-700 px-1.5 py-0.2 rounded font-bold">EDITED</span>
-                  </div>
-                  <div className="rounded-xl overflow-hidden border-2 border-red-500 aspect-4/3 bg-slate-100 shadow-sm">
-                    <img src={sample.after} alt="AI Edited" className="w-full h-full object-cover" />
-                  </div>
-                </div>
+            {/* Saturation */}
+            <div>
+              <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                <span className="font-medium flex items-center gap-1.5">
+                  <Droplets className="w-3.5 h-3.5 text-blue-500" /> Saturation
+                </span>
+                <span className="font-mono text-slate-500">{saturation}%</span>
               </div>
-            ) : (
-              <div className="rounded-xl overflow-hidden border border-slate-200 aspect-16/9 bg-slate-900 max-h-[440px] flex items-center justify-center">
-                <img
-                  src={viewMode === 'before' ? sample.before : sample.after}
-                  alt={viewMode}
-                  className="w-full h-full object-cover"
-                />
+              <input
+                type="range"
+                min="0"
+                max="250"
+                value={saturation}
+                onChange={(e) => setSaturation(parseInt(e.target.value))}
+                className="w-full accent-emerald-600"
+              />
+            </div>
+
+            {/* Hue Rotate */}
+            <div>
+              <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                <span className="font-medium">Hue Shift</span>
+                <span className="font-mono text-slate-500">{hue}°</span>
               </div>
-            )}
+              <input
+                type="range"
+                min="0"
+                max="360"
+                value={hue}
+                onChange={(e) => setHue(parseInt(e.target.value))}
+                className="w-full accent-emerald-600"
+              />
+            </div>
+
+            {/* Grayscale */}
+            <div>
+              <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                <span className="font-medium">Grayscale</span>
+                <span className="font-mono text-slate-500">{grayscale}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={grayscale}
+                onChange={(e) => setGrayscale(parseInt(e.target.value))}
+                className="w-full accent-emerald-600"
+              />
+            </div>
+
+            {/* Sepia */}
+            <div>
+              <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                <span className="font-medium">Sepia</span>
+                <span className="font-mono text-slate-500">{sepia}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={sepia}
+                onChange={(e) => setSepia(parseInt(e.target.value))}
+                className="w-full accent-emerald-600"
+              />
+            </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Active Instruction: &ldquo;{instruction}&rdquo;</span>
-            <span className="font-mono text-emerald-600 font-bold">Inpainting Accuracy 99.4%</span>
+          {/* 3. Transform & Orientation */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-3">
+            <h2 className="text-xs font-bold text-slate-800">Transforms</h2>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex flex-col items-center justify-center gap-1 transition-colors"
+              >
+                <RotateCw className="w-4 h-4 text-emerald-600" />
+                <span>Rotate 90°</span>
+              </button>
+
+              <button
+                onClick={() => setFlipH((prev) => !prev)}
+                className={`p-2.5 border rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1 transition-colors ${
+                  flipH
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+                    : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                }`}
+              >
+                <FlipHorizontal className="w-4 h-4" />
+                <span>Flip H</span>
+              </button>
+
+              <button
+                onClick={() => setFlipV((prev) => !prev)}
+                className={`p-2.5 border rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1 transition-colors ${
+                  flipV
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+                    : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                }`}
+              >
+                <FlipVertical className="w-4 h-4" />
+                <span>Flip V</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Live Viewport Canvas (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-900">Live Editor Preview</span>
+              <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                Rot: {rotation}° • H-Flip: {flipH ? 'Yes' : 'No'}
+              </span>
+            </div>
+
+            {/* Container for image transform and CSS filters */}
+            <div className="relative rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center min-h-[440px] border border-slate-800 shadow-inner">
+              {imageSrc ? (
+                <div
+                  className="transition-all duration-150 max-h-[500px] flex items-center justify-center p-4"
+                  style={{
+                    transform: `rotate(${rotation}deg) scale(${flipH ? -1 : 1}, ${flipV ? -1 : 1})`,
+                  }}
+                >
+                  <img
+                    src={imageSrc}
+                    alt="Editor preview"
+                    className="max-h-[460px] w-auto max-w-full object-contain rounded-lg shadow-2xl transition-all"
+                    style={{ filter: filterString }}
+                  />
+                </div>
+              ) : (
+                <div className="text-slate-500 text-xs">No image loaded</div>
+              )}
+            </div>
           </div>
         </div>
       </div>

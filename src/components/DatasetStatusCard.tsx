@@ -1,65 +1,86 @@
 import React from 'react';
-import { FileSpreadsheet, RotateCcw, ChevronDown } from 'lucide-react';
+import { FileSpreadsheet, RotateCcw, ChevronDown, Upload, FileText } from 'lucide-react';
 import { Dataset } from '../types/dashboard';
 
 interface DatasetStatusCardProps {
   dataset: Dataset;
   onSelectSheet?: (sheetName: string) => void;
   onTriggerReset?: () => void;
+  onOpenUpload?: () => void;
 }
 
 export const DatasetStatusCard: React.FC<DatasetStatusCardProps> = ({
   dataset,
   onSelectSheet,
   onTriggerReset,
+  onOpenUpload,
 }) => {
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 mb-4 max-w-sm select-none">
-      {/* Top Header: Icon + ACTIVE EXCEL + Reset (Matches Attachment 4) */}
-      <div className="flex items-center justify-between text-slate-500 mb-1.5">
-        <span className="font-bold text-[10px] text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-          <FileSpreadsheet className="w-3.5 h-3.5 text-red-500" />
-          ACTIVE EXCEL
-        </span>
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 mb-4 select-none">
+      {/* Line 1: Active Excel Heading in bold */}
+      <div className="flex items-center gap-2 mb-2.5">
+        <FileSpreadsheet className="w-4 h-4 text-red-600" />
+        <h2 className="font-bold text-slate-900 text-sm tracking-tight">Active Excel</h2>
+      </div>
+
+      {/* Line 2: file name, select sheet drop down, reupload the excel, reset in one line */}
+      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+        {/* File Name */}
+        <div 
+          className="flex items-center gap-1.5 font-semibold text-slate-800 text-xs bg-slate-100/90 px-3 py-1.5 rounded-lg border border-slate-200/70 max-w-xs truncate"
+          title={dataset.fileName}
+        >
+          <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+          <span className="truncate">{dataset.fileName}</span>
+        </div>
+
+        {/* Select Sheet Drop Down */}
+        {dataset.availableSheets && dataset.availableSheets.length > 0 && onSelectSheet ? (
+          <div className="relative">
+            <select
+              value={dataset.sheetName}
+              onChange={(e) => onSelectSheet(e.target.value)}
+              className="bg-white hover:bg-slate-50 border border-slate-200 focus:border-red-500 text-slate-800 text-xs font-semibold rounded-lg pl-3 pr-8 py-1.5 outline-none appearance-none cursor-pointer transition-colors shadow-2xs"
+            >
+              {dataset.availableSheets.map((s) => (
+                <option key={s} value={s}>
+                  Sheet: {s}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+        ) : null}
+
+        {/* Re-upload the Excel */}
+        {onOpenUpload && (
+          <button
+            onClick={onOpenUpload}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all active:scale-98 flex items-center gap-1.5 cursor-pointer"
+            title="Re-upload or change Excel file"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Re-upload Excel</span>
+          </button>
+        )}
+
+        {/* Reset */}
         {onTriggerReset && (
           <button
             onClick={onTriggerReset}
-            className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-red-50 transition-colors"
-            title="Reset dataset"
+            className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 font-bold text-xs rounded-lg shadow-2xs transition-all active:scale-98 flex items-center gap-1.5 cursor-pointer"
+            title="Reset dataset and clear workspace"
           >
-            <RotateCcw className="w-3 h-3 text-red-600" />
+            <RotateCcw className="w-3.5 h-3.5 text-red-600" />
             <span>Reset</span>
           </button>
         )}
-      </div>
 
-      {/* File Name */}
-      <div className="font-bold text-slate-900 text-xs sm:text-sm truncate mb-2" title={dataset.fileName}>
-        {dataset.fileName}
-      </div>
-
-      {/* Sheet Dropdown Selector */}
-      {dataset.availableSheets && dataset.availableSheets.length > 0 && onSelectSheet ? (
-        <div className="relative mb-2">
-          <select
-            value={dataset.sheetName}
-            onChange={(e) => onSelectSheet(e.target.value)}
-            className="w-full bg-slate-50 hover:bg-white border border-slate-200 focus:border-red-500 text-slate-800 text-xs font-semibold rounded-lg px-2.5 py-1.5 outline-none appearance-none cursor-pointer transition-colors pr-7"
-          >
-            {dataset.availableSheets.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        {/* Summary info badge (rows & cols) on the right */}
+        <div className="ml-auto hidden md:flex items-center gap-2 text-xs font-mono text-slate-500">
+          <span className="bg-slate-100 px-2.5 py-1 rounded-md text-slate-700 font-semibold">{dataset.totalRows.toLocaleString()} rows</span>
+          <span className="bg-slate-100 px-2.5 py-1 rounded-md text-slate-700 font-semibold">{dataset.totalColumns} cols</span>
         </div>
-      ) : null}
-
-      {/* Footer: Rows & Columns Count */}
-      <div className="flex items-center justify-between text-xs font-mono text-slate-500 pt-1 border-t border-slate-100">
-        <span className="font-semibold text-slate-700">{dataset.totalRows.toLocaleString()} rows</span>
-        <span className="font-semibold text-slate-700">{dataset.totalColumns} cols</span>
       </div>
     </div>
   );

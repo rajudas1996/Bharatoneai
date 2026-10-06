@@ -20,7 +20,6 @@ import { generateAutoDashboardConfig } from './utils/dashboardBuilder';
 import { Sidebar, MainNavTab } from './components/Sidebar';
 import { Header } from './components/Header';
 import { HomePage } from './components/HomePage';
-import { ToolStudioModal } from './components/ToolStudioModal';
 import { DatasetStatusCard } from './components/DatasetStatusCard';
 import { DetectedHeadersBar } from './components/DetectedHeadersBar';
 import { DynamicTopFilterBar } from './components/DynamicTopFilterBar';
@@ -36,6 +35,21 @@ import { FieldManagerDrawer } from './components/FieldManagerDrawer';
 import { ChartBuilderModal } from './components/ChartBuilderModal';
 import { KPIBuilderModal } from './components/KPIBuilderModal';
 import { FilterConfigModal } from './components/FilterConfigModal';
+import { UpgradeModal } from './components/UpgradeModal';
+import { AuthProfileModal, UserProfile } from './components/AuthProfileModal';
+
+// AI Tool Workspaces
+import { ImageCreatorTool } from './components/tools/ImageCreatorTool';
+import { ImageEditorTool } from './components/tools/ImageEditorTool';
+import { AnimateImageTool } from './components/tools/AnimateImageTool';
+import { TextToVideoTool } from './components/tools/TextToVideoTool';
+import { MusicGeneratorTool } from './components/tools/MusicGeneratorTool';
+import { DatabaseAuthTool } from './components/tools/DatabaseAuthTool';
+import { MapsDataTool } from './components/tools/MapsDataTool';
+import { AllToolsView } from './components/tools/AllToolsView';
+import { ProjectsView } from './components/tools/ProjectsView';
+import { SettingsView } from './components/tools/SettingsView';
+import { HelpSupportView } from './components/tools/HelpSupportView';
 
 export default function App() {
   // Navigation tab: 'home' is the default landing page matching reference image
@@ -55,10 +69,7 @@ export default function App() {
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<DataRow | null>(null);
 
-  // Interactive AI Tool Studio Modal state
-  const [activeStudioToolId, setActiveStudioToolId] = useState<string | null>(null);
-
-  // Dynamic Builder Dialogs
+  // Dynamic Builder modals & drawers
   const [isFieldManagerOpen, setIsFieldManagerOpen] = useState(false);
   const [isChartBuilderOpen, setIsChartBuilderOpen] = useState(false);
   const [editingChartWidget, setEditingChartWidget] = useState<DynamicChartWidget | null>(null);
@@ -70,7 +81,33 @@ export default function App() {
 
   const [isFilterConfigOpen, setIsFilterConfigOpen] = useState(false);
 
-  // Unified Filter State
+  // User Profile state with localStorage persistence
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem('bharat1_user_profile');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      name: 'Raju Das',
+      email: 'rajudaszoology22@gmail.com',
+      phone: '+91 98765 43210',
+      plan: 'Gold',
+      role: 'Super Admin',
+      isLoggedIn: true,
+    };
+  });
+
+  const handleUpdateProfile = useCallback((profile: UserProfile) => {
+    setUserProfile(profile);
+    try {
+      localStorage.setItem('bharat1_user_profile', JSON.stringify(profile));
+    } catch (e) {}
+  }, []);
+
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Interactive filter state
   const [filterState, setFilterState] = useState<FilterState>({
     globalSearch: '',
     categorical: {},
@@ -83,16 +120,15 @@ export default function App() {
     setFilterState((prev) => ({ ...prev, globalSearch: term }));
   }, []);
 
-  // Cross-filter updater (Power BI-style)
-  const handleSetCrossFilter = useCallback(
-    (columnKey: string, value: string, sourceChartId: string) => {
-      setFilterState((prev) => ({
-        ...prev,
-        crossFilter: { columnKey, value, sourceChartId },
-      }));
-    },
-    []
-  );
+  // Cross-filter click handler
+  const handleSetCrossFilter = useCallback((columnKey: string, value: string) => {
+    setFilterState((prev) => {
+      if (prev.crossFilter?.columnKey === columnKey && prev.crossFilter?.value === value) {
+        return { ...prev, crossFilter: null };
+      }
+      return { ...prev, crossFilter: { columnKey, value } };
+    });
+  }, []);
 
   const handleClearCrossFilter = useCallback(() => {
     setFilterState((prev) => ({ ...prev, crossFilter: null }));
@@ -162,91 +198,113 @@ export default function App() {
         }
       }
 
-      // 3. Range filters
+      // 3. Numeric range filters
       for (const [colKey, range] of Object.entries(ranges)) {
-        const numVal = parseNumericValue(row[colKey]);
-        if (numVal === null || numVal < range.min || numVal > range.max) {
-          return false;
+        if (range && (range.min !== undefined || range.max !== undefined)) {
+          const numVal = parseNumericValue(row[colKey]);
+          if (numVal !== null) {
+            if (range.min !== undefined && numVal < range.min) return false;
+            if (range.max !== undefined && numVal > range.max) return false;
+          }
         }
       }
 
-      // 4. Global search check
+      // 4. Global search
       if (hasSearch) {
-        const matched = Object.values(row).some((val) => {
-          if (val === null || val === undefined) return false;
-          return String(val).toLowerCase().includes(searchLower);
-        });
-        if (!matched) return false;
+        let match = false;
+        for (const val of Object.values(row)) {
+          if (val !== null && val !== undefined) {
+            if (String(val).toLowerCase().includes(searchLower)) {
+              match = true;
+              break;
+            }
+          }
+        }
+        if (!match) return false;
       }
 
       return true;
     });
   }, [dataset, filterState]);
 
-  // Download filtered Excel
-  const handleExportFilteredExcel = useCallback(() => {
-    if (!dataset) return;
-    exportFilteredToExcel(filteredRows, dataset.columns, dataset.fileName);
-  }, [filteredRows, dataset]);
+  // Handle dataset loaded from UploadModal or EmptyWorkspace
+  const handleDatasetLoaded = useCallback((newDataset: Dataset, newWb?: XLSX.WorkBook) => {
+    setDataset(newDataset);
+    if (newWb) setWorkbook(newWb);
+
+    // Automatically detect headers and generate dynamic layout
+    const autoConfig = generateAutoDashboardConfig(newDataset.columns, newDataset.rows);
+    setLayoutConfig(autoConfig);
+
+    // Reset filters
+    setFilterState({
+      globalSearch: '',
+      categorical: {},
+      ranges: {},
+      crossFilter: null,
+    });
+
+    setIsUploadOpen(false);
+    setCurrentTab('dashboard');
+  }, []);
+
+  // Handle Sheet selection from multi-sheet workbook
+  const handleSelectSheet = useCallback((sheetName: string) => {
+    if (!workbook || !dataset) return;
+    try {
+      const switchedDataset = parseWorkbookSheet(workbook, sheetName, dataset.fileName);
+      setDataset(switchedDataset);
+
+      // Re-generate auto layout for the newly selected sheet
+      const autoConfig = generateAutoDashboardConfig(switchedDataset.columns, switchedDataset.rows);
+      setLayoutConfig(autoConfig);
+
+      // Clear filters on sheet change
+      handleClearAllFilters();
+    } catch (err) {
+      console.error('Error switching sheet:', err);
+    }
+  }, [workbook, dataset, handleClearAllFilters]);
 
   // Trigger Reset confirmation dialog
   const handleTriggerReset = useCallback(() => {
     setIsResetConfirmOpen(true);
   }, []);
 
-  // Confirmed reset - erases all loaded data from this session
+  // Confirm Reset and purge all memory state
   const handleConfirmReset = useCallback(() => {
     setDataset(null);
     setWorkbook(null);
     setLayoutConfig(null);
-    handleClearAllFilters();
-    setCurrentTab('home');
+    setFilterState({
+      globalSearch: '',
+      categorical: {},
+      ranges: {},
+      crossFilter: null,
+    });
+    setSelectedRecord(null);
     setIsResetConfirmOpen(false);
-  }, [handleClearAllFilters]);
+  }, []);
 
-  // Uploaded dataset handler - instantly activates Live Dashboard
-  const handleDatasetLoaded = useCallback(
-    (newDataset: Dataset, newWorkbook?: XLSX.WorkBook) => {
-      setDataset(newDataset);
-      if (newWorkbook) {
-        setWorkbook(newWorkbook);
-      }
-      // Automatically generate smart layout for these exact headers
-      const autoConfig = generateAutoDashboardConfig(newDataset.columns, newDataset.rows);
-      setLayoutConfig(autoConfig);
+  // Export filtered rows to Excel
+  const handleExportFilteredExcel = useCallback(() => {
+    if (!dataset) return;
+    exportFilteredToExcel(
+      filteredRows,
+      dataset.columns,
+      dataset.fileName
+    );
+  }, [dataset, filteredRows]);
 
-      handleClearAllFilters();
-      // Navigate straight to the Live Dashboard view to play with data
-      setCurrentTab('dashboard');
-    },
-    [handleClearAllFilters]
-  );
-
-  // Switch active sheet dynamically from workbook
-  const handleSelectSheet = useCallback(
-    (sheetName: string) => {
-      if (!workbook || !dataset) return;
-      try {
-        const newDataset = parseWorkbookSheet(workbook, dataset.fileName, sheetName);
-        setDataset(newDataset);
-        const autoConfig = generateAutoDashboardConfig(newDataset.columns, newDataset.rows);
-        setLayoutConfig(autoConfig);
-        handleClearAllFilters();
-      } catch (err: any) {
-        console.error('Failed to switch sheet:', err);
-      }
-    },
-    [workbook, dataset, handleClearAllFilters]
-  );
-
-  // Layout Modification Handlers
+  // Reset to auto layout
   const handleResetToAuto = useCallback(() => {
     if (!dataset) return;
-    const autoConfig = generateAutoDashboardConfig(dataset.columns, dataset.rows);
-    setLayoutConfig(autoConfig);
+    const newConfig = generateAutoDashboardConfig(dataset.columns, dataset.rows);
+    setLayoutConfig(newConfig);
   }, [dataset]);
 
-  const handleUpdateLayout = useCallback((newConfig: DashboardLayoutConfig) => {
+  // Layout modifier callbacks
+  const handleUpdateLayoutConfig = useCallback((newConfig: DashboardLayoutConfig) => {
     setLayoutConfig(newConfig);
   }, []);
 
@@ -290,7 +348,7 @@ export default function App() {
       return {
         ...prev,
         kpis: exists
-          ? prev.kpis.map((k) => (k.id === kpi.id ? k : k))
+          ? prev.kpis.map((k) => (k.id === kpi.id ? kpi : k))
           : [...prev.kpis, kpi],
       };
     });
@@ -342,17 +400,10 @@ export default function App() {
     setIsKPIBuilderOpen(true);
   }, []);
 
-  // Handle sidebar navigation clicks
+  // Handle sidebar navigation clicks - direct workspace activation
   const handleSelectNavTab = useCallback((tab: MainNavTab) => {
-    if (tab === 'home' || tab === 'dashboard' || tab === 'table' || tab === 'schema') {
-      setCurrentTab(tab);
-    } else {
-      // Open the interactive studio for other AI tools
-      setActiveStudioToolId(tab);
-    }
+    setCurrentTab(tab);
   }, []);
-
-  const isLiveDashboardView = currentTab === 'dashboard' || currentTab === 'table' || currentTab === 'schema';
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50/70 text-slate-900 font-sans antialiased">
@@ -369,20 +420,17 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header matching reference image with Search bar, Help, Bell (3), and Profile avatar */}
+        {/* Top Header matching reference image (No search bar per user request) */}
         <Header
-          dataset={dataset}
-          globalSearch={filterState.globalSearch}
-          setGlobalSearch={handleSetGlobalSearch}
-          onOpenUpload={() => setIsUploadOpen(true)}
-          onSelectSheet={handleSelectSheet}
-          onOpenHelp={() => setActiveStudioToolId('help')}
-          isDashboardView={isLiveDashboardView}
+          onOpenHelp={() => setCurrentTab('help')}
+          onOpenUpgrade={() => setIsUpgradeOpen(true)}
+          onOpenProfile={() => setIsProfileOpen(true)}
+          userProfile={userProfile}
         />
 
         {/* Scrollable Viewport */}
         <main className="flex-1 overflow-y-auto px-6 py-6 bg-slate-50/60">
-          {/* HOME VIEW: Matches Reference Image */}
+          {/* 1. HOME VIEW */}
           {currentTab === 'home' && (
             <HomePage
               onOpenUpload={() => setIsUploadOpen(true)}
@@ -391,26 +439,27 @@ export default function App() {
                 if (toolId === 'live_dashboard') {
                   setCurrentTab('dashboard');
                 } else {
-                  setActiveStudioToolId(toolId);
+                  setCurrentTab(toolId as MainNavTab);
                 }
               }}
               dataset={dataset}
             />
           )}
 
-          {/* LIVE DASHBOARD VIEW: Interactive Excel Dashboard Engine */}
-          {isLiveDashboardView && (
+          {/* 2. LIVE DASHBOARD VIEW */}
+          {currentTab === 'dashboard' && (
             <>
               {!dataset ? (
                 /* Blank Workspace Upload Dropzone */
                 <EmptyWorkspace onDatasetLoaded={handleDatasetLoaded} />
               ) : (
                 <>
-                  {/* 1. Active Excel Card (Relocated in place of banner per Attachment 4/5) */}
+                  {/* 1. Active Excel Card: Bold Heading, then [file name, sheet dropdown, reupload, reset in one line] */}
                   <DatasetStatusCard
                     dataset={dataset}
                     onSelectSheet={handleSelectSheet}
                     onTriggerReset={handleTriggerReset}
+                    onOpenUpload={() => setIsUploadOpen(true)}
                   />
 
                   {/* 2. Detected Headers Bar & Dynamic Builder Quick Triggers */}
@@ -472,7 +521,7 @@ export default function App() {
                   )}
 
                   {/* 5. Dynamic Dashboard Charts View */}
-                  {currentTab === 'dashboard' && layoutConfig && (
+                  {layoutConfig && (
                     <>
                       <DynamicDashboardCharts
                         charts={layoutConfig.charts}
@@ -503,32 +552,43 @@ export default function App() {
                       />
                     </>
                   )}
-
-                  {/* 6. Full Page Table View */}
-                  {currentTab === 'table' && (
-                    <DataTable
-                      columns={dataset.columns}
-                      rows={filteredRows}
-                      onSelectRow={(row) => setSelectedRecord(row)}
-                      onExport={handleExportFilteredExcel}
-                    />
-                  )}
-
-                  {/* 7. Detected Headers & Schema View */}
-                  {currentTab === 'schema' && (
-                    <SchemaView
-                      columns={dataset.columns}
-                      totalRows={dataset.totalRows}
-                      onQuickAddChart={handleQuickAddChartForColumn}
-                      onQuickAddKPI={handleQuickAddKPIForColumn}
-                      onToggleFilter={handleToggleFilterColumn}
-                      filterColumns={layoutConfig?.filterColumns || []}
-                    />
-                  )}
                 </>
               )}
             </>
           )}
+
+          {/* 3. IMAGE CREATOR TOOL */}
+          {currentTab === 'image_create' && <ImageCreatorTool />}
+
+          {/* 4. IMAGE EDIT TOOL */}
+          {currentTab === 'image_edit' && <ImageEditorTool />}
+
+          {/* 5. ANIMATE IMAGE TO VIDEO */}
+          {currentTab === 'animate_image' && <AnimateImageTool />}
+
+          {/* 6. TEXT TO VIDEO */}
+          {currentTab === 'text_to_video' && <TextToVideoTool />}
+
+          {/* 7. MUSIC GENERATION */}
+          {currentTab === 'music_gen' && <MusicGeneratorTool />}
+
+          {/* 8. DATABASE & AUTH */}
+          {currentTab === 'database_auth' && <DatabaseAuthTool />}
+
+          {/* 9. MAPS DATA */}
+          {currentTab === 'maps_data' && <MapsDataTool />}
+
+          {/* 10. ALL TOOLS VIEW */}
+          {currentTab === 'all_tools' && <AllToolsView onSelectTab={handleSelectNavTab} />}
+
+          {/* 11. PROJECTS */}
+          {currentTab === 'projects' && <ProjectsView onSelectTab={handleSelectNavTab} />}
+
+          {/* 12. SETTINGS */}
+          {currentTab === 'settings' && <SettingsView />}
+
+          {/* 13. HELP & SUPPORT */}
+          {currentTab === 'help' && <HelpSupportView />}
         </main>
       </div>
 
@@ -557,20 +617,6 @@ export default function App() {
         onCancel={() => setIsResetConfirmOpen(false)}
       />
 
-      {/* Interactive Tool Studio Modal for other AI tools */}
-      <ToolStudioModal
-        toolId={activeStudioToolId}
-        onClose={() => setActiveStudioToolId(null)}
-        onNavigateToDashboard={() => {
-          setActiveStudioToolId(null);
-          setCurrentTab('dashboard');
-        }}
-        onOpenUpload={() => {
-          setActiveStudioToolId(null);
-          setIsUploadOpen(true);
-        }}
-      />
-
       {/* Field Manager Drawer (Master Dynamic Builder) */}
       {dataset && layoutConfig && (
         <FieldManagerDrawer
@@ -578,15 +624,15 @@ export default function App() {
           onClose={() => setIsFieldManagerOpen(false)}
           columns={dataset.columns}
           layoutConfig={layoutConfig}
-          onUpdateLayout={handleUpdateLayout}
+          onUpdateLayout={handleUpdateLayoutConfig}
           onOpenAddChartForColumn={handleQuickAddChartForColumn}
           onOpenAddKPIForColumn={handleQuickAddKPIForColumn}
-          onOpenEditChart={(chart) => {
-            setEditingChartWidget(chart);
+          onOpenEditChart={(w) => {
+            setEditingChartWidget(w);
             setIsChartBuilderOpen(true);
           }}
-          onOpenEditKPI={(kpi) => {
-            setEditingKPI(kpi);
+          onOpenEditKPI={(k) => {
+            setEditingKPI(k);
             setIsKPIBuilderOpen(true);
           }}
         />
@@ -603,9 +649,9 @@ export default function App() {
           }}
           columns={dataset.columns}
           rows={dataset.rows}
-          onSaveWidget={handleSaveChartWidget}
           initialWidget={editingChartWidget}
           defaultColumnKey={chartDefaultColKey}
+          onSaveWidget={handleSaveChartWidget}
         />
       )}
 
@@ -619,24 +665,44 @@ export default function App() {
             setKpiDefaultColKey(undefined);
           }}
           columns={dataset.columns}
-          rows={filteredRows}
+          rows={dataset.rows}
           totalRowCount={dataset.totalRows}
-          onSaveKPI={handleSaveKPIWidget}
           initialKPI={editingKPI}
           defaultColumnKey={kpiDefaultColKey}
+          onSaveKPI={handleSaveKPIWidget}
         />
       )}
 
-      {/* Filter Configuration Modal */}
-      {dataset && layoutConfig && (
+      {/* Filter Columns Configuration Modal */}
+      {dataset && (
         <FilterConfigModal
           isOpen={isFilterConfigOpen}
           onClose={() => setIsFilterConfigOpen(false)}
           columns={dataset.columns}
-          activeFilterColumns={layoutConfig.filterColumns}
+          activeFilterColumns={layoutConfig?.filterColumns || []}
           onSaveFilterColumns={handleSaveFilterColumns}
         />
       )}
+
+      {/* Upgrade Plan Modal */}
+      <UpgradeModal
+        isOpen={isUpgradeOpen}
+        onClose={() => setIsUpgradeOpen(false)}
+        currentPlan={userProfile.plan}
+        onSelectPlan={(plan) => handleUpdateProfile({ ...userProfile, plan })}
+      />
+
+      {/* Auth & Profile Modal */}
+      <AuthProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        userProfile={userProfile}
+        onUpdateProfile={handleUpdateProfile}
+        onOpenUpgrade={() => {
+          setIsProfileOpen(false);
+          setIsUpgradeOpen(true);
+        }}
+      />
     </div>
   );
 }

@@ -1,225 +1,343 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Video, 
-  Sparkles, 
   Play, 
   Pause, 
+  Sparkles, 
   Download, 
-  RefreshCw, 
   Layers, 
   Sliders, 
-  Check, 
-  Maximize2 
+  Film, 
+  RotateCcw, 
+  Wand2, 
+  Clock, 
+  Camera, 
+  Music,
+  Check
 } from 'lucide-react';
 
-const VIDEO_PRESETS = [
-  'Hyper-lapse of bustling financial district intersection at dusk, light trails of traffic, 4k ultra-wide',
-  'Drone aerial shot slowly gliding over a futuristic green architecture corporate campus, golden hour',
-  'Slow motion cinematic macro shot of water droplet splashing on glass table with clean studio lighting',
-  'Futuristic automated container port with autonomous robotic cranes operating at night, neon reflections',
+interface Scene {
+  id: number;
+  title: string;
+  desc: string;
+  camera: string;
+}
+
+const SAMPLE_PROMPTS = [
+  'Hyperloop express connecting Delhi to Mumbai at sunset with neon reflections',
+  'Aerial drone glide through mist-covered tea plantations of Munnar, Kerala',
+  'Spacecraft landing at Vikram Sarabhai Space Station on the Moon in 2047',
+  'Traditional classical Bharatnatyam dancer in temple with flowing light ribbons',
 ];
 
 export const TextToVideoTool: React.FC = () => {
-  const [prompt, setPrompt] = useState(VIDEO_PRESETS[0]);
-  const [aspectRatio, setAspectRatio] = useState('16:9');
-  const [duration, setDuration] = useState('5s');
-  const [fps, setFps] = useState('60fps');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [prompt, setPrompt] = useState('Aerial drone glide through mist-covered tea plantations of Munnar, Kerala');
+  const [style, setStyle] = useState('cinematic');
+  const [duration, setDuration] = useState(6);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [videoThumbnail, setVideoThumbnail] = useState(
-    'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1200&q=80'
-  );
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isRendering, setIsRendering] = useState(false);
+  const [activeScene, setActiveScene] = useState(1);
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
+
+  const scenes: Scene[] = [
+    { id: 1, title: 'Scene 1: Establishing Shot', desc: 'Wide aerial angle sweeping over lush emerald hills', camera: 'Slow Wide Pan' },
+    { id: 2, title: 'Scene 2: Close Dynamic Pass', desc: 'Morning sunbeams piercing through silver fog clouds', camera: 'Dolly Forward' },
+    { id: 3, title: 'Scene 3: Climax Panorama', desc: 'Sunset glow washing over mountain valleys in 4K', camera: 'Crane Up & Orbit' },
+  ];
+
+  // Render simulated neural video frames
+  useEffect(() => {
+    let active = true;
+
+    const render = () => {
+      if (!active) return;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const w = canvas.width;
+          const h = canvas.height;
+
+          let elapsed = (Date.now() - startTimeRef.current) / 1000;
+          if (elapsed > duration) {
+            startTimeRef.current = Date.now();
+            elapsed = 0;
+          }
+          if (isPlaying) {
+            setCurrentTime(elapsed);
+          }
+
+          const sceneIdx = Math.min(scenes.length - 1, Math.floor((elapsed / duration) * scenes.length));
+          setActiveScene(sceneIdx + 1);
+
+          const progress = (elapsed / duration) * Math.PI * 2;
+
+          // Background procedural render
+          const grad = ctx.createLinearGradient(0, 0, w, h);
+          grad.addColorStop(0, '#042f2e');
+          grad.addColorStop(0.4, '#065f46');
+          grad.addColorStop(1, '#022c22');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          // Moving sunlight rays
+          ctx.save();
+          const lightX = w * 0.7 + Math.sin(progress) * 40;
+          const lightGrad = ctx.createRadialGradient(lightX, 60, 10, lightX, 60, 300);
+          lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.7)');
+          lightGrad.addColorStop(0.6, 'rgba(16, 185, 129, 0.2)');
+          lightGrad.addColorStop(1, 'transparent');
+          ctx.fillStyle = lightGrad;
+          ctx.beginPath();
+          ctx.arc(lightX, 60, 300, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // Mountain contours moving with camera parallax
+          const shift = Math.sin(progress) * 35;
+          ctx.fillStyle = '#064e3b';
+          ctx.beginPath();
+          ctx.moveTo(0, h);
+          ctx.lineTo(0, 240 + shift * 0.4);
+          ctx.lineTo(200, 180 + shift * 0.3);
+          ctx.lineTo(400, 260 + shift * 0.5);
+          ctx.lineTo(600, 170 + shift * 0.3);
+          ctx.lineTo(w, 230 + shift * 0.4);
+          ctx.lineTo(w, h);
+          ctx.closePath();
+          ctx.fill();
+
+          // Foreground Tea terraces
+          ctx.fillStyle = '#022c22';
+          ctx.beginPath();
+          ctx.moveTo(0, h);
+          ctx.lineTo(0, 340 + shift);
+          ctx.lineTo(250, 290 + shift);
+          ctx.lineTo(550, 360 + shift);
+          ctx.lineTo(w, 310 + shift);
+          ctx.lineTo(w, h);
+          ctx.closePath();
+          ctx.fill();
+
+          // Mist layers
+          ctx.fillStyle = 'rgba(240, 253, 250, 0.15)';
+          ctx.fillRect(0, 260 + Math.sin(progress * 2) * 20, w, 60);
+
+          // Scene indicator overlay
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+          ctx.roundRect(16, 16, 180, 26, 6);
+          ctx.fill();
+          ctx.fillStyle = '#10b981';
+          ctx.font = 'bold 11px Inter, sans-serif';
+          ctx.fillText(`SCENE ${sceneIdx + 1} / 3`, 26, 33);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(`• ${scenes[sceneIdx].camera}`, 94, 33);
+        }
+      }
+
+      if (isPlaying) {
+        animFrameRef.current = requestAnimationFrame(render);
+      }
+    };
+
+    render();
+
+    return () => {
+      active = false;
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [isPlaying, duration, prompt]);
+
+  const handleRenderNewPrompt = () => {
+    setIsRendering(true);
     setTimeout(() => {
-      const pool = [
-        'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
-      ];
-      setVideoThumbnail(pool[Math.floor(Math.random() * pool.length)]);
-      setIsGenerating(false);
+      setIsRendering(false);
+      startTimeRef.current = Date.now();
+      setCurrentTime(0);
       setIsPlaying(true);
-    }, 1500);
+    }, 1000);
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-6 max-w-7xl mx-auto space-y-6 select-none">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-extrabold text-slate-900">Text to Video Studio</h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">
-              Sora / Veo 2 Engine
-            </span>
+    <div className="max-w-7xl mx-auto space-y-6 pb-12 animate-in fade-in duration-200">
+      {/* Page Header */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+            <Video className="w-6 h-6 text-white" />
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Generate cinematic video scenes directly from natural language prompts
-          </p>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Text to Video Studio</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 uppercase">
+                Sora 2.0 Engine
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500">
+              Generate full cinematic video sequences, multi-scene storyboards, and camera choreography from script prompts
+            </p>
+          </div>
         </div>
 
-        <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
-          Neural Motion Synthesizer
-        </span>
+        <button
+          onClick={() => alert('Full 4K Video export queued! You will receive notification when rendering finishes.')}
+          className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>Export 4K Video</span>
+        </button>
       </div>
 
-      {/* Main Grid */}
+      {/* Main Grid: Script Left, Video Renderer Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Form (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-5">
-          {/* Prompt */}
-          <div>
-            <label className="text-xs font-bold text-slate-800 block mb-1.5">
-              Scene & Motion Description
+        {/* Left Column: Script Prompts & Scenes (5 cols) */}
+        <div className="lg:col-span-5 space-y-5">
+          {/* 1. Prompt Input */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-3">
+            <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+              <span>Scene Script / Prompt</span>
+              <span className="text-[11px] text-blue-600 font-semibold">Storyboard Enabled</span>
             </label>
             <textarea
-              rows={4}
+              rows={3}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe scene composition, lighting, camera angle, and subject actions..."
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-red-500 outline-none resize-none leading-relaxed"
+              placeholder="Describe your scene in detail..."
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-blue-500 outline-none transition-all resize-none shadow-2xs"
             />
 
-            {/* Inspiration Chips */}
-            <div className="space-y-1 mt-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Prompt Inspiration:
+            {/* Suggestions */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Preset Scripts:
               </span>
-              {VIDEO_PRESETS.slice(0, 2).map((p, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setPrompt(p)}
-                  className="w-full text-left text-[11px] p-2 rounded-lg bg-slate-50 hover:bg-red-50 hover:text-red-700 text-slate-600 border border-slate-200/60 transition-colors truncate"
+              <div className="flex flex-col gap-1.5">
+                {SAMPLE_PROMPTS.map((p, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setPrompt(p);
+                      handleRenderNewPrompt();
+                    }}
+                    className="text-[11px] bg-slate-50 hover:bg-blue-50 hover:text-blue-700 text-slate-600 px-2.5 py-1.5 rounded-lg transition-colors text-left truncate border border-slate-200/60"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleRenderNewPrompt}
+              disabled={isRendering}
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+            >
+              {isRendering ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Generating Video Shots...</span>
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>Synthesize Storyboard</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* 2. Storyboard Shot List */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-3">
+            <h2 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Film className="w-4 h-4 text-blue-600" />
+              <span>Storyboard Shots Breakdown</span>
+            </h2>
+            <div className="space-y-2">
+              {scenes.map((s) => (
+                <div
+                  key={s.id}
+                  className={`p-3 rounded-xl border transition-all ${
+                    activeScene === s.id
+                      ? 'border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/20'
+                      : 'border-slate-200 bg-slate-50/60 text-slate-600'
+                  }`}
                 >
-                  &ldquo;{p}&rdquo;
-                </button>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-slate-900">{s.title}</span>
+                    <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-600">
+                      {s.camera}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">{s.desc}</p>
+                </div>
               ))}
             </div>
           </div>
-
-          {/* Settings Grid */}
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="text-xs font-bold text-slate-800 block mb-1">Aspect Ratio</label>
-              <select
-                value={aspectRatio}
-                onChange={(e) => setAspectRatio(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:border-red-500"
-              >
-                <option value="16:9">16:9 Landscape</option>
-                <option value="9:16">9:16 Vertical</option>
-                <option value="1:1">1:1 Square</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-800 block mb-1">Duration</label>
-              <select
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:border-red-500"
-              >
-                <option value="4s">4 Seconds</option>
-                <option value="5s">5 Seconds</option>
-                <option value="8s">8 Seconds</option>
-                <option value="12s">12 Seconds</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-800 block mb-1">Frame Rate</label>
-              <select
-                value={fps}
-                onChange={(e) => setFps(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:border-red-500"
-              >
-                <option value="24fps">24 FPS (Film)</option>
-                <option value="60fps">60 FPS (Smooth)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Generate CTA */}
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating || !prompt.trim()}
-            className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]"
-          >
-            {isGenerating ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Generating Diffusion Video Frames...</span>
-              </>
-            ) : (
-              <>
-                <Video className="w-4 h-4" />
-                <span>Generate Video from Text</span>
-              </>
-            )}
-          </button>
         </div>
 
-        {/* Right Output Video Player (7 cols) */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col justify-between min-h-[480px]">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <span className="text-xs font-bold text-slate-900">Rendered Video Monitor</span>
-              <a
-                href={videoThumbnail}
-                download="text-to-video-output.mp4"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export Video MP4</span>
-              </a>
+        {/* Right Column: Live Video Canvas Player (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
+            {/* Player Viewport */}
+            <div className="relative rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center border border-slate-800 shadow-xl">
+              <canvas
+                ref={canvasRef}
+                width={800}
+                height={450}
+                className="w-full h-full object-cover"
+              />
             </div>
 
-            {/* Video Canvas */}
-            <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video flex items-center justify-center shadow-inner group">
-              {isGenerating ? (
-                <div className="text-center p-6 space-y-3">
-                  <div className="w-12 h-12 border-3 border-red-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                  <div className="text-xs font-bold text-white">Synthesizing Temporal Latent Dynamics</div>
-                  <div className="text-[10px] text-slate-400">
-                    Applying {fps} diffusion model passes across {duration} timeline...
+            {/* Video Controls */}
+            <div className="mt-4 pt-3 border-t border-slate-100 space-y-3">
+              {/* Scrub Bar */}
+              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-blue-600 h-full transition-all"
+                  style={{ width: `${(currentTime / duration) * 100}%` }}
+                />
+              </div>
+
+              {/* Action Bar */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="p-2 bg-slate-900 hover:bg-black text-white rounded-xl transition-all shadow-2xs"
+                  >
+                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      startTimeRef.current = Date.now();
+                      setCurrentTime(0);
+                      setIsPlaying(true);
+                    }}
+                    className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+
+                  <div className="text-xs font-mono text-slate-500 pl-2">
+                    {currentTime.toFixed(1)}s / {duration}.0s
                   </div>
                 </div>
-              ) : (
-                <div className="relative w-full h-full overflow-hidden">
-                  <img
-                    src={videoThumbnail}
-                    alt="Video Render"
-                    className={`w-full h-full object-cover transition-transform duration-1000 ${
-                      isPlaying ? 'scale-110 translate-y-2' : 'scale-100'
-                    }`}
-                  />
 
-                  {/* Player Overlay */}
-                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between text-white text-xs">
-                    <button onClick={() => setIsPlaying(!isPlaying)} className="hover:text-red-400">
-                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </button>
-
-                    <div className="flex-1 mx-4">
-                      <div className="w-full bg-white/30 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-red-600 h-full w-2/3 rounded-full" />
-                      </div>
-                    </div>
-
-                    <span className="font-mono text-[10px] text-white/90">
-                      {aspectRatio} • {fps} • 1080p
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
+                  <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-semibold">
+                    4K Ultra HD
+                  </span>
+                  <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-semibold">
+                    HDR10
+                  </span>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span className="truncate max-w-md">Prompt: &ldquo;{prompt}&rdquo;</span>
-            <span className="font-mono text-emerald-600 font-bold shrink-0">FPS Consistency: 99.8%</span>
           </div>
         </div>
       </div>
