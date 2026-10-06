@@ -69,3 +69,80 @@ export function formatCompactNumber(num: number): string {
 export function formatCurrencyWithSuffix(num: number | null | undefined): string {
   return formatSmartNumber(num, true);
 }
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatDateParts(day: number, monthIndex: number, year: number): string {
+  const dd = String(day).padStart(2, '0');
+  const mmm = MONTH_NAMES[monthIndex] || 'Jan';
+  return `${dd} ${mmm} ${year}`;
+}
+
+/**
+ * Converts Excel serial dates (e.g. 45577), Unix timestamps, Date objects,
+ * or ISO date strings into clean formatted dates like "12 Oct 2024".
+ */
+export function formatDisplayDate(val: any): string | null {
+  if (val === null || val === undefined || val === '') return null;
+
+  // 1. If it's already a Date instance
+  if (val instanceof Date) {
+    if (!isNaN(val.getTime())) {
+      return formatDateParts(val.getUTCDate(), val.getUTCMonth(), val.getUTCFullYear());
+    }
+    return null;
+  }
+
+  // 2. Check if it's a number or purely numeric string (Excel serial date / Unix timestamp)
+  const str = String(val).trim();
+  const num = typeof val === 'number' ? val : (str !== '' && !isNaN(Number(str)) ? Number(str) : NaN);
+
+  if (!isNaN(num) && /^\d+(\.\d+)?$/.test(str)) {
+    // Excel serial dates: between 1000 (1902) and 85000 (2132)
+    // Jan 1 1970 is day 25569 in Excel 1900 date system
+    if (num >= 1000 && num <= 85000) {
+      const dateMs = Math.round((num - 25569) * 86400 * 1000);
+      const d = new Date(dateMs);
+      if (!isNaN(d.getTime())) {
+        return formatDateParts(d.getUTCDate(), d.getUTCMonth(), d.getUTCFullYear());
+      }
+    }
+
+    // Unix timestamp in seconds (e.g. 1728691200)
+    if (num > 1000000000 && num < 2500000000) {
+      const d = new Date(num * 1000);
+      if (!isNaN(d.getTime())) {
+        return formatDateParts(d.getUTCDate(), d.getUTCMonth(), d.getUTCFullYear());
+      }
+    }
+
+    // Unix timestamp in milliseconds (e.g. 1728691200000)
+    if (num >= 2500000000 && num < 5000000000000) {
+      const d = new Date(num);
+      if (!isNaN(d.getTime())) {
+        return formatDateParts(d.getUTCDate(), d.getUTCMonth(), d.getUTCFullYear());
+      }
+    }
+  }
+
+  // 3. If it's a date string (ISO, "YYYY-MM-DD", "DD/MM/YYYY", etc.)
+  if (
+    str.includes('T') ||
+    /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str) ||
+    /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/.test(str)
+  ) {
+    const parsed = Date.parse(str);
+    if (!isNaN(parsed)) {
+      const d = new Date(parsed);
+      return formatDateParts(d.getDate(), d.getMonth(), d.getFullYear());
+    }
+  }
+
+  // If already formatted like "12 Oct 2024" or "12-Oct-2024"
+  if (/^\d{1,2}\s+[a-zA-Z]{3,}\s+\d{4}$/.test(str)) {
+    return str;
+  }
+
+  return null;
+}
+

@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Building2, Copy, Check } from 'lucide-react';
 import { ColumnMeta, DataRow } from '../types/dashboard';
-import { formatSmartNumber, parseNumericValue } from '../utils/numberFormat';
+import { formatSmartNumber, parseNumericValue, formatDisplayDate } from '../utils/numberFormat';
 
 interface RecordDetailModalProps {
   row: DataRow | null;
@@ -58,16 +58,22 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {columns.map((col) => {
               const val = row[col.key];
-              const isNum = col.type === 'numeric';
+              const lowerName = col.name.toLowerCase();
+              const isDate = col.type === 'date' || col.role === 'date' || lowerName.includes('date') || lowerName.includes('dob');
+              const isNum = !isDate && col.type === 'numeric';
               const isRevenue = col.role === 'revenue';
 
               let display = '—';
               if (val !== null && val !== undefined && val !== '') {
-                if (isNum) {
+                if (isDate) {
+                  const d = formatDisplayDate(val);
+                  display = d || String(val);
+                } else if (isNum) {
                   const n = parseNumericValue(val);
                   display = n !== null ? formatSmartNumber(n, isRevenue) : String(val);
                 } else {
-                  display = String(val);
+                  const maybeD = lowerName.includes('date') ? formatDisplayDate(val) : null;
+                  display = maybeD || String(val);
                 }
               }
 

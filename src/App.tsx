@@ -252,7 +252,7 @@ export default function App() {
   const handleSelectSheet = useCallback((sheetName: string) => {
     if (!workbook || !dataset) return;
     try {
-      const switchedDataset = parseWorkbookSheet(workbook, sheetName, dataset.fileName);
+      const switchedDataset = parseWorkbookSheet(workbook, dataset.fileName, sheetName);
       setDataset(switchedDataset);
 
       // Re-generate auto layout for the newly selected sheet

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Dataset } from '../types/dashboard';
 import { parseExcelFile, exportFilteredToExcel } from '../utils/excelParser';
-import { getDemoDataset } from '../data/demoData';
+import { getDemoDataset, getDemoWorkbook } from '../data/demoData';
 import * as XLSX from 'xlsx';
 
 interface EmptyWorkspaceProps {
@@ -72,7 +72,8 @@ export const EmptyWorkspace: React.FC<EmptyWorkspaceProps> = ({ onDatasetLoaded 
 
   const handleLoadSampleData = () => {
     const demo = getDemoDataset();
-    onDatasetLoaded(demo);
+    const wb = getDemoWorkbook();
+    onDatasetLoaded(demo, wb);
   };
 
   const handleDownloadSampleTemplate = () => {

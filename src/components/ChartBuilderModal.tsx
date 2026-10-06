@@ -75,7 +75,7 @@ export const ChartBuilderModal: React.FC<ChartBuilderModalProps> = ({
   const [dimensionKey, setDimensionKey] = useState('');
   const [metricKey, setMetricKey] = useState<string>(''); // empty string = Count of Records
   const [aggregation, setAggregation] = useState<AggregationType>('count');
-  const [topN, setTopN] = useState<number>(8);
+  const [topN, setTopN] = useState<number>(0);
   const [showTrendOverlay, setShowTrendOverlay] = useState<boolean>(false);
   const [trendPeriod, setTrendPeriod] = useState<number>(3);
   const [colorPalette, setColorPalette] = useState<'red' | 'corporate' | 'emerald' | 'amber' | 'blue'>('red');
@@ -90,7 +90,7 @@ export const ChartBuilderModal: React.FC<ChartBuilderModalProps> = ({
       setDimensionKey(initialWidget.dimensionKey);
       setMetricKey(initialWidget.metricKey || '');
       setAggregation(initialWidget.aggregation);
-      setTopN(initialWidget.topN || 8);
+      setTopN(initialWidget.topN ?? 0);
       setShowTrendOverlay(!!initialWidget.showTrendOverlay);
       setTrendPeriod(initialWidget.trendPeriod || 3);
       setColorPalette(initialWidget.colorPalette || 'red');
@@ -113,7 +113,7 @@ export const ChartBuilderModal: React.FC<ChartBuilderModalProps> = ({
       const initialMetric = hasNumeric ? numericColumns[0].key : '';
       setMetricKey(initialMetric);
       setAggregation(hasNumeric ? 'sum' : 'count');
-      setTopN(8);
+      setTopN(0); // 0 = Show ALL categories by default
       setShowTrendOverlay(inferredType === 'line');
       setTrendPeriod(3);
       setColorPalette('red');
@@ -358,26 +358,28 @@ export const ChartBuilderModal: React.FC<ChartBuilderModalProps> = ({
               </div>
             </div>
 
-            {/* 5. Top N Limit */}
+            {/* 5. Category Limit */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-slate-700">Display Top Items</label>
-                <span className="text-xs font-mono font-bold text-red-600">{topN} items</span>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700">Display Categories Limit</label>
+                <span className="text-xs font-mono font-bold text-red-600">
+                  {topN === 0 ? 'All Categories (Max)' : `Top ${topN} items`}
+                </span>
               </div>
-              <input
-                type="range"
-                min="3"
-                max="25"
-                step="1"
+              <select
                 value={topN}
                 onChange={(e) => setTopN(Number(e.target.value))}
-                className="w-full accent-red-600 cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                <span>Top 3</span>
-                <span>Top 10</span>
-                <span>Top 25</span>
-              </div>
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:bg-white focus:border-red-500 outline-none"
+              >
+                <option value={0}>All Available Categories (Complete / Max)</option>
+                <option value={5}>Top 5 items</option>
+                <option value={8}>Top 8 items</option>
+                <option value={10}>Top 10 items</option>
+                <option value={15}>Top 15 items</option>
+                <option value={20}>Top 20 items</option>
+                <option value={25}>Top 25 items</option>
+                <option value={30}>Top 30 items</option>
+              </select>
             </div>
 
             {/* 6. Trend Analysis Toggle (for Line & Area charts) */}

@@ -1,6 +1,51 @@
 import * as XLSX from 'xlsx';
 import { ColumnMeta, ColumnRole, ColumnType, DataRow, Dataset } from '../types/dashboard';
-import { parseNumericValue } from './numberFormat';
+import { parseNumericValue, formatDisplayDate } from './numberFormat';
+
+export function isDateColumnHeader(header: string): boolean {
+  const l = header.toLowerCase().trim();
+  return (
+    l.includes('date') ||
+    l.includes('time') ||
+    l.includes('dob') ||
+    l.includes('valid upto') ||
+    l.includes('valid to') ||
+    l.includes('expiry') ||
+    l.includes('timestamp') ||
+    l.includes('created_at') ||
+    l.includes('updated_at')
+  );
+}
+
+export function isSerialNumberHeader(header: string): boolean {
+  const l = header.toLowerCase().trim();
+  return (
+    l === 'sl. no.' ||
+    l === 'sl. no' ||
+    l === 'sl no' ||
+    l === 's.no' ||
+    l === 's.no.' ||
+    l === 'sr no' ||
+    l === 'sr. no' ||
+    l === 'sr. no.' ||
+    l === 'sno' ||
+    l === 'serial' ||
+    l === 'serial no' ||
+    l === 'serial number' ||
+    l === 'id' ||
+    l === 'row id' ||
+    l === 'row_id' ||
+    l === 'index' ||
+    l === 'seq' ||
+    l === 'sequence' ||
+    l.startsWith('sl.') ||
+    l.startsWith('sl ') ||
+    l.startsWith('sr.') ||
+    l.startsWith('sr ') ||
+    l.includes('serial number') ||
+    l.includes('serial no')
+  );
+}
 
 export async function parseExcelFile(
   file: File,
@@ -51,11 +96,17 @@ export function parseWorkbookSheet(
     throw new Error(`Could not identify any column headers in sheet "${sheetName}".`);
   }
 
-  // Build clean rows with unique __id
+  // Build clean rows with unique __id, and normalize any date columns/serial numbers
   const rows: DataRow[] = rawRows.map((r, idx) => {
     const cleanRow: DataRow = { __id: `row-${idx + 1}` };
     sampleHeaders.forEach((header) => {
-      cleanRow[header] = r[header] !== undefined ? r[header] : '';
+      const rawVal = r[header] !== undefined ? r[header] : '';
+      if (isDateColumnHeader(header) && rawVal !== '') {
+        const formatted = formatDisplayDate(rawVal);
+        cleanRow[header] = formatted || rawVal;
+      } else {
+        cleanRow[header] = rawVal;
+      }
     });
     return cleanRow;
   });
@@ -88,6 +139,9 @@ function analyzeColumn(header: string, rows: DataRow[]): ColumnMeta {
   let max = -Infinity;
   const uniqueSet = new Set<string>();
 
+  const isDateCol = isDateColumnHeader(header);
+  const isSerialCol = isSerialNumberHeader(header);
+
   for (const row of rows) {
     const val = row[header];
     if (val !== null && val !== undefined && val !== '') {
@@ -95,30 +149,33 @@ function analyzeColumn(header: string, rows: DataRow[]): ColumnMeta {
       const strVal = String(val).trim();
       uniqueSet.add(strVal);
 
-      const num = parseNumericValue(val);
-      if (num !== null) {
-        numericParsableCount++;
-        sum += num;
-        if (num < min) min = num;
-        if (num > max) max = num;
+      // Only calculate sum/min/max if NOT a date column and NOT a serial number
+      if (!isDateCol && !isSerialCol) {
+        const num = parseNumericValue(val);
+        if (num !== null) {
+          numericParsableCount++;
+          sum += num;
+          if (num < min) min = num;
+          if (num > max) max = num;
+        }
       }
     }
   }
 
   const nullCount = totalCount - nonNullCount;
-  const isMostlyNumeric = nonNullCount > 0 && numericParsableCount / nonNullCount >= 0.65;
+  const isMostlyNumeric = !isDateCol && !isSerialCol && nonNullCount > 0 && numericParsableCount / nonNullCount >= 0.65;
   const uniqueCount = uniqueSet.size;
 
   let type: ColumnType = 'text';
-  if (isMostlyNumeric) {
+  if (isDateCol) {
+    type = 'date';
+  } else if (isMostlyNumeric) {
     type = 'numeric';
   } else if (
-    lowerHeader.includes('date') ||
-    lowerHeader.includes('time') ||
     lowerHeader.includes('year') ||
     lowerHeader.includes('month')
   ) {
-    type = 'date';
+    type = 'categorical';
   } else if (uniqueCount <= 120 || (nonNullCount > 0 && uniqueCount / nonNullCount <= 0.45)) {
     type = 'categorical';
   }

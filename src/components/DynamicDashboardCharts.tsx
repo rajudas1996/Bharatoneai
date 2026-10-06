@@ -113,10 +113,17 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
       {charts.map((widget) => {
+        // Calculate all categories count and the active data slice
+        const allCategoriesData = aggregateChartData({ ...widget, topN: 0 }, filteredRows, columns);
         const data = aggregateChartData(widget, filteredRows, columns);
         const palette = PALETTE_MAP[widget.colorPalette || 'red'] || PALETTE_MAP.red;
         const isCurrentlyCrossFilteredSource =
           filterState.crossFilter?.sourceChartId === widget.id;
+        const totalCategories = allCategoriesData.length;
+
+        // Dynamic height for horizontal bar if many items
+        const isHBar = widget.chartType === 'horizontal_bar';
+        const hBarDynamicHeight = Math.max(260, data.length * 28);
 
         return (
           <div
@@ -127,10 +134,10 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
                 : 'border-slate-200/90 hover:border-slate-300'
             }`}
           >
-            {/* Card Header: Title, Quick Chart Switcher, Actions */}
-            <div className="flex items-start justify-between gap-2 mb-3">
+            {/* Card Header: Title, Category Count Selector, Quick Chart Switcher, Actions */}
+            <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-xs font-bold text-slate-900 truncate" title={widget.title}>
                     {widget.title}
                   </h3>
@@ -142,12 +149,35 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
                       </button>
                     </span>
                   )}
+
+                  {/* Category Limit Selector: Default is All (Maximum available) with option to customize */}
+                  {totalCategories > 1 && (
+                    <div className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5 text-[10px]">
+                      <span className="text-slate-500 font-medium">Items:</span>
+                      <select
+                        value={widget.topN || 0}
+                        onChange={(e) => onUpdateChart({ ...widget, topN: Number(e.target.value) })}
+                        className="bg-transparent text-slate-800 font-bold outline-none cursor-pointer"
+                        title="Customize number of categories shown"
+                      >
+                        <option value={0}>All ({totalCategories}) [Max]</option>
+                        {totalCategories > 5 && <option value={5}>Top 5</option>}
+                        {totalCategories > 8 && <option value={8}>Top 8</option>}
+                        {totalCategories > 10 && <option value={10}>Top 10</option>}
+                        {totalCategories > 15 && <option value={15}>Top 15</option>}
+                        {totalCategories > 20 && <option value={20}>Top 20</option>}
+                        {totalCategories > 25 && <option value={25}>Top 25</option>}
+                        {totalCategories > 30 && <option value={30}>Top 30</option>}
+                      </select>
+                    </div>
+                  )}
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono truncate">
+                <div className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
                   Grouped by <span className="text-slate-600 font-semibold">{widget.dimensionKey}</span>
                   {widget.metricKey && (
                     <span> • {widget.aggregation.toUpperCase()}({widget.metricKey})</span>
                   )}
+                  <span className="text-slate-500 ml-1.5">({data.length} of {totalCategories} showing)</span>
                 </div>
               </div>
 
@@ -301,92 +331,98 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
             )}
 
             {/* Chart Canvas */}
-            <div className="h-64 w-full select-none">
+            <div className={`w-full select-none ${isHBar && data.length > 8 ? 'max-h-[460px] overflow-y-auto pr-1' : 'h-64'}`}>
               {data.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
+                <div className="h-64 flex items-center justify-center text-xs text-slate-400 italic">
                   No data matching current filters
                 </div>
               ) : widget.chartType === 'horizontal_bar' ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={data}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                    <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      tick={{ fontSize: 10, fill: '#475569' }}
-                      width={85}
-                      stroke="#cbd5e1"
-                    />
-                    <Tooltip
-                      formatter={(val: any) => [val, widget.metricKey || 'Count']}
-                      contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px' }}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[0, 4, 4, 0]}
-                      cursor="pointer"
-                      onClick={(e: any) => handleItemClick(widget.dimensionKey, e.name, widget.id)}
+                <div style={{ height: isHBar && data.length > 8 ? `${hBarDynamicHeight}px` : '100%', minHeight: '250px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={data}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 15, bottom: 5 }}
                     >
-                      {data.map((entry, index) => {
-                        const active = isCrossFiltered(widget.dimensionKey, entry.name);
-                        return (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={active ? '#991b1b' : palette[0]}
-                            opacity={
-                              filterState.crossFilter && !active && filterState.crossFilter.columnKey === widget.dimensionKey
-                                ? 0.35
-                                : 1
-                            }
-                          />
-                        );
-                      })}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        tick={{ fontSize: 10, fill: '#475569' }}
+                        width={105}
+                        stroke="#cbd5e1"
+                      />
+                      <Tooltip
+                        formatter={(val: any) => [val, widget.metricKey || 'Count']}
+                        contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px' }}
+                      />
+                      <Bar
+                        dataKey="value"
+                        radius={[0, 4, 4, 0]}
+                        cursor="pointer"
+                        onClick={(e: any) => handleItemClick(widget.dimensionKey, e.name, widget.id)}
+                      >
+                        {data.map((entry, index) => {
+                          const active = isCrossFiltered(widget.dimensionKey, entry.name);
+                          return (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={active ? '#991b1b' : palette[0]}
+                              opacity={
+                                filterState.crossFilter && !active && filterState.crossFilter.columnKey === widget.dimensionKey
+                                  ? 0.35
+                                  : 1
+                              }
+                            />
+                          );
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               ) : widget.chartType === 'bar' ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 25 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 9, fill: '#64748b' }}
-                      angle={-25}
-                      textAnchor="end"
-                      stroke="#cbd5e1"
-                    />
-                    <YAxis tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px' }}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[4, 4, 0, 0]}
-                      cursor="pointer"
-                      onClick={(e: any) => handleItemClick(widget.dimensionKey, e.name, widget.id)}
-                    >
-                      {data.map((entry, index) => {
-                        const active = isCrossFiltered(widget.dimensionKey, entry.name);
-                        return (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={active ? '#991b1b' : palette[0]}
-                            opacity={
-                              filterState.crossFilter && !active && filterState.crossFilter.columnKey === widget.dimensionKey
-                                ? 0.35
-                                : 1
-                            }
-                          />
-                        );
-                      })}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className={data.length > 12 ? 'overflow-x-auto h-full' : 'h-full'}>
+                  <div style={{ minWidth: data.length > 12 ? `${Math.max(450, data.length * 36)}px` : '100%', height: '100%' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 25 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis
+                          dataKey="name"
+                          tick={{ fontSize: 9, fill: '#64748b' }}
+                          angle={-25}
+                          textAnchor="end"
+                          stroke="#cbd5e1"
+                        />
+                        <YAxis tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px' }}
+                        />
+                        <Bar
+                          dataKey="value"
+                          radius={[4, 4, 0, 0]}
+                          cursor="pointer"
+                          onClick={(e: any) => handleItemClick(widget.dimensionKey, e.name, widget.id)}
+                        >
+                          {data.map((entry, index) => {
+                            const active = isCrossFiltered(widget.dimensionKey, entry.name);
+                            return (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={active ? '#991b1b' : palette[0]}
+                                opacity={
+                                  filterState.crossFilter && !active && filterState.crossFilter.columnKey === widget.dimensionKey
+                                    ? 0.35
+                                    : 1
+                                }
+                              />
+                            );
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               ) : widget.chartType === 'donut' || widget.chartType === 'pie' ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>

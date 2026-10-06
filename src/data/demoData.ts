@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx';
 import { Dataset, ColumnMeta, DataRow } from '../types/dashboard';
 
 export const rawSampleData = [
@@ -398,14 +399,18 @@ export function getDemoDataset(): Dataset {
       max = Math.max(...nums);
       sum = nums.reduce((a, b) => a + b, 0);
       avg = sum / nums.length;
-    } else if (header === 'No. of Employees' || header === 'Sl. No.') {
+    } else if (header === 'No. of Employees') {
       type = 'numeric';
-      role = header === 'Sl. No.' ? 'general' : 'count';
+      role = 'count';
       const nums = rawSampleData.map((d) => Number(d[header as keyof typeof d]) || 0);
       min = Math.min(...nums);
       max = Math.max(...nums);
       sum = nums.reduce((a, b) => a + b, 0);
       avg = sum / nums.length;
+    } else if (header === 'Sl. No.') {
+      type = 'numeric';
+      role = 'general';
+      // Do not assign sum/avg to serial numbers
     } else if (header === 'Company Name') {
       type = 'text';
       role = 'entity_name';
@@ -469,4 +474,43 @@ export function getDemoDataset(): Dataset {
     uploadedAt: '12 Oct 2024, 10:45 AM',
     isDemo: false,
   };
+}
+
+export function getDemoWorkbook(): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Master Lead Sheet
+  const ws1 = XLSX.utils.json_to_sheet(rawSampleData);
+  XLSX.utils.book_append_sheet(wb, ws1, 'Master Lead Sheet');
+
+  // Sheet 2: Renewal Tracker
+  const renewalData = rawSampleData.map((d, i) => ({
+    "Sl. No.": i + 1,
+    "Company Name": d["Company Name"],
+    "Renewal Month": d["Renewal Month"],
+    "LOB": d["LOB"],
+    "Existing Premium": d["Existing Premium"],
+    "RM": d["RM"],
+    "Insurance Company": d["Name of Insurance Company"],
+    "Valid Upto": d["Valid Upto"],
+    "Status": d["Lead Current Status"],
+  }));
+  const ws2 = XLSX.utils.json_to_sheet(renewalData);
+  XLSX.utils.book_append_sheet(wb, ws2, 'Renewal Tracker');
+
+  // Sheet 3: RM Portfolio
+  const rmData = rawSampleData.map((d, i) => ({
+    "Sl. No.": i + 1,
+    "RM": d["RM"],
+    "Client": d["Company Name"],
+    "State": d["State"],
+    "City": d["City"],
+    "Turnover (Cr)": d["Turnover (Cr)"],
+    "Premium": d["Existing Premium"],
+    "Policy Type": d["Policy Type"],
+  }));
+  const ws3 = XLSX.utils.json_to_sheet(rmData);
+  XLSX.utils.book_append_sheet(wb, ws3, 'RM Portfolio');
+
+  return wb;
 }

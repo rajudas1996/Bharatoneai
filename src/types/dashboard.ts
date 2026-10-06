@@ -66,7 +66,10 @@ export type ChartType =
   | 'pie' 
   | 'line' 
   | 'area' 
-  | 'metric_leaderboard';
+  | 'metric_leaderboard'
+  | 'auto_map'
+  | 'india_map'
+  | 'world_map';
 
 export type AggregationType = 
   | 'count' 
@@ -80,13 +83,18 @@ export interface DynamicChartWidget {
   id: string;
   title: string;
   chartType: ChartType;
-  dimensionKey: string;      // X-axis or Group By (categorical, date, text)
+  dimensionKey: string;      // X-axis or Group By (categorical, date, text, geo)
   metricKey?: string;        // Y-axis or value column (numeric, or count if omitted)
   aggregation: AggregationType; // 'count' | 'sum' | 'avg' | 'min' | 'max'
-  topN?: number;             // Top 5, 8, 10, etc.
+  topN?: number;             // Top 5, 8, 10, etc. (0 = All categories)
   showTrendOverlay?: boolean; // For line/area charts (moving average overlay)
   trendPeriod?: number;      // Moving average period (3, 5, 7)
   colorPalette?: 'red' | 'corporate' | 'emerald' | 'amber' | 'blue';
+  geoScope?: 'india' | 'world' | 'district' | 'auto';
+  selectedState?: string;
+  drilldownDistrict?: string;
+  latColumnKey?: string;
+  lonColumnKey?: string;
 }
 
 export interface DynamicKPIWidget {

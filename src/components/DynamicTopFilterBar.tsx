@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Trash2, Filter, ChevronDown, Check, SlidersHorizontal } from 'lucide-react';
 import { ColumnMeta, FilterState, DataRow } from '../types/dashboard';
+import { formatDisplayDate } from '../utils/numberFormat';
 
 interface DynamicTopFilterBarProps {
   columns: ColumnMeta[];
@@ -38,10 +39,18 @@ export const DynamicTopFilterBar: React.FC<DynamicTopFilterBarProps> = ({
 
   // Get unique sorted values for column
   const getOptions = (colKey: string) => {
+    const colMeta = columns.find((c) => c.key === colKey);
+    const isDate = colMeta?.type === 'date' || colMeta?.role === 'date' || colKey.toLowerCase().includes('date');
     const set = new Set<string>();
     allRows.forEach((r) => {
-      const v = String(r[colKey] ?? '').trim();
-      if (v) set.add(v);
+      let v = String(r[colKey] ?? '').trim();
+      if (v) {
+        if (isDate) {
+          const formatted = formatDisplayDate(v);
+          if (formatted) v = formatted;
+        }
+        set.add(v);
+      }
     });
     return Array.from(set).sort();
   };

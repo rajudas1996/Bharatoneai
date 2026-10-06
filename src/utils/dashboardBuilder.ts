@@ -5,7 +5,46 @@ import {
   DynamicChartWidget, 
   DynamicKPIWidget 
 } from '../types/dashboard';
-import { parseNumericValue, formatSmartNumber, formatCurrencyWithSuffix } from './numberFormat';
+import { parseNumericValue, formatSmartNumber, formatCurrencyWithSuffix, formatDisplayDate } from './numberFormat';
+import { detectGeographicColumns } from './geoUtils';
+
+/**
+ * Identifies serial numbers, IDs, date columns, or contact fields
+ * that should NEVER be summed as KPI metrics.
+ */
+export function isNonMetricColumn(columnName: string, columnKey: string): boolean {
+  const norm = (columnName + ' ' + columnKey).toLowerCase().replace(/[._-]/g, ' ').trim();
+  
+  // 1. Serial number / Sequence / ID patterns
+  const serialPatterns = [
+    'sl no', 's no', 'sr no', 'sno', 'serial no', 'serial number', 'serial',
+    'row id', 'row num', 'row no', 'index', 'seq', 'sequence', 'token', 'token no',
+    'id', 'record id', 'sr'
+  ];
+  if (serialPatterns.some((p) => norm === p || norm.startsWith(p + ' ') || norm.endsWith(' ' + p))) {
+    return true;
+  }
+  if (/^sl\.?\s*no\.?$/i.test(columnName.trim()) || /^sr\.?\s*no\.?$/i.test(columnName.trim())) {
+    return true;
+  }
+
+  // 2. Date / Time / Timestamp patterns
+  const datePatterns = [
+    'date', 'time', 'timestamp', 'dob', 'dt', 'year', 'month', 'day',
+    'valid upto', 'valid to', 'expiry', 'created', 'updated'
+  ];
+  if (datePatterns.some((p) => norm.includes(p))) {
+    return true;
+  }
+
+  // 3. Phone / Mobile / Pin / Postal code
+  const contactPatterns = ['phone', 'mobile', 'contact', 'pincode', 'pin code', 'zip', 'postal'];
+  if (contactPatterns.some((p) => norm.includes(p))) {
+    return true;
+  }
+
+  return false;
+}
 
 /**
  * Automatically inspects ANY uploaded Excel sheet headers and rows,
@@ -15,7 +54,10 @@ export function generateAutoDashboardConfig(
   columns: ColumnMeta[],
   rows: DataRow[]
 ): DashboardLayoutConfig {
-  const numericCols = columns.filter((c) => c.type === 'numeric');
+  // Exclude serial numbers and date columns from numeric metrics
+  const numericCols = columns.filter(
+    (c) => c.type === 'numeric' && !isNonMetricColumn(c.name, c.key)
+  );
   const categoricalCols = columns.filter(
     (c) => c.type === 'categorical' || (c.uniqueValues.length > 0 && c.uniqueValues.length <= 150)
   );
@@ -31,7 +73,7 @@ export function generateAutoDashboardConfig(
     },
   ];
 
-  // Numeric KPIs (Sum / Avg)
+  // Numeric KPIs (Sum / Avg) - strictly true metrics only
   if (numericCols.length > 0) {
     const primaryNum = numericCols[0];
     const isCurrency = 
@@ -159,9 +201,27 @@ export function generateAutoDashboardConfig(
     }
   }
 
-  // 3. DYNAMIC CHARTS
+  // 3. DYNAMIC CHARTS (topN = 0 by default to show ALL available categories completely)
   const charts: DynamicChartWidget[] = [];
   const primaryNum = numericCols[0];
+
+  // Map Feature: Automatically determine and add Map ONLY if valid geographic data exists
+  const geoInfo = detectGeographicColumns(columns, rows);
+  if (geoInfo.hasGeographicData) {
+    charts.push({
+      id: 'chart-geo-map-auto',
+      title: geoInfo.geoScope === 'world'
+        ? 'Global Geographic Map'
+        : `${geoInfo.geoColumnName} Geographic Map`,
+      chartType: 'auto_map',
+      dimensionKey: geoInfo.geoColumnKey,
+      metricKey: primaryNum?.key,
+      aggregation: primaryNum ? 'sum' : 'count',
+      topN: 0,
+      colorPalette: 'red',
+      geoScope: geoInfo.geoScope,
+    });
+  }
 
   // Chart 1: Categorical Bar or Horizontal Bar (e.g. State, Category, RM, Product)
   const barDim = stateCol || categoricalCols.find(c => c.uniqueValues.length >= 3 && c.uniqueValues.length <= 40) || categoricalCols[0];
@@ -173,7 +233,7 @@ export function generateAutoDashboardConfig(
       dimensionKey: barDim.key,
       metricKey: primaryNum?.key,
       aggregation: primaryNum ? 'sum' : 'count',
-      topN: 8,
+      topN: 0, // 0 = Show ALL available categories (complete list)
       colorPalette: 'red',
     });
   }
@@ -190,7 +250,7 @@ export function generateAutoDashboardConfig(
       chartType: 'donut',
       dimensionKey: lowCardCol.key,
       aggregation: 'count',
-      topN: 6,
+      topN: 0, // Show all categories
       colorPalette: 'corporate',
     });
   }
@@ -209,14 +269,14 @@ export function generateAutoDashboardConfig(
       dimensionKey: trendDim.key,
       metricKey: primaryNum?.key,
       aggregation: primaryNum ? 'sum' : 'count',
-      topN: 15,
+      topN: 0, // Show complete timeline
       showTrendOverlay: true,
       trendPeriod: 3,
       colorPalette: 'red',
     });
   }
 
-  // Chart 4: Leaderboard / Ranking (Top Entities)
+  // Chart 4: Leaderboard / Ranking (All Entities)
   const rankDim = entityCol || agentCol || categoricalCols.find(
     (c) => c.key !== barDim?.key && c.key !== lowCardCol?.key && c.key !== trendDim?.key
   );
@@ -224,12 +284,12 @@ export function generateAutoDashboardConfig(
   if (rankDim) {
     charts.push({
       id: 'chart-rank-4',
-      title: `Top ${rankDim.name} Performance`,
+      title: `${rankDim.name} Performance`,
       chartType: 'metric_leaderboard',
       dimensionKey: rankDim.key,
       metricKey: primaryNum?.key,
       aggregation: primaryNum ? 'sum' : 'count',
-      topN: 6,
+      topN: 0, // Show all
       colorPalette: 'red',
     });
   }
@@ -247,7 +307,7 @@ export function generateAutoDashboardConfig(
       dimensionKey: secondaryDim.key,
       metricKey: numericCols.length > 1 ? numericCols[1].key : primaryNum?.key,
       aggregation: primaryNum ? 'sum' : 'count',
-      topN: 7,
+      topN: 0, // Show all
       colorPalette: 'corporate',
     });
   }
@@ -282,7 +342,12 @@ export function aggregateChartData(
 
   rows.forEach((row) => {
     let dimVal = String(row[dimensionKey] ?? '').trim();
-    if (!dimVal) dimVal = 'Unknown / N/A';
+    if (!dimVal) {
+      dimVal = 'Unknown / N/A';
+    } else if (isDateOrTime) {
+      const parsedDate = formatDisplayDate(dimVal);
+      if (parsedDate) dimVal = parsedDate;
+    }
 
     if (!groups[dimVal]) {
       groups[dimVal] = { count: 0, sum: 0, min: Infinity, max: -Infinity };

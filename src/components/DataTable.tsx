@@ -13,7 +13,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { ColumnMeta, DataRow } from '../types/dashboard';
-import { formatSmartNumber, parseNumericValue } from '../utils/numberFormat';
+import { formatSmartNumber, parseNumericValue, formatDisplayDate } from '../utils/numberFormat';
 
 interface DataTableProps {
   columns: ColumnMeta[];
@@ -314,11 +314,13 @@ export const DataTable: React.FC<DataTableProps> = ({
 
                     {activeColumns.map((col) => {
                       const val = row[col.key];
-                      const isNum = col.type === 'numeric';
-                      const isPremium = col.role === 'premium' || col.name.toLowerCase().includes('premium');
-                      const isRevenue = col.role === 'revenue' || col.name.toLowerCase().includes('turnover');
-                      const isStatus = col.role === 'status' || col.name.toLowerCase().includes('status');
-                      const isWebsite = col.name.toLowerCase().includes('website');
+                      const lowerName = col.name.toLowerCase();
+                      const isDate = col.type === 'date' || col.role === 'date' || lowerName.includes('date') || lowerName.includes('dob') || lowerName.includes('valid');
+                      const isNum = !isDate && col.type === 'numeric';
+                      const isPremium = col.role === 'premium' || lowerName.includes('premium');
+                      const isRevenue = col.role === 'revenue' || lowerName.includes('turnover');
+                      const isStatus = col.role === 'status' || lowerName.includes('status');
+                      const isWebsite = lowerName.includes('website');
 
                       let displayContent: React.ReactNode = '—';
                       if (val !== null && val !== undefined && val !== '') {
@@ -336,11 +338,27 @@ export const DataTable: React.FC<DataTableProps> = ({
                               {String(val)}
                             </a>
                           );
+                        } else if (isDate) {
+                          // Format Excel date serials or timestamps as proper formatted date
+                          const dateFormatted = formatDisplayDate(val);
+                          displayContent = dateFormatted ? (
+                            <span className="font-mono text-slate-700 bg-slate-50/80 px-2 py-0.5 rounded border border-slate-200/60 inline-flex items-center gap-1 font-semibold text-[11px]">
+                              {dateFormatted}
+                            </span>
+                          ) : (
+                            String(val)
+                          );
                         } else if (isNum) {
                           const n = parseNumericValue(val);
                           displayContent = n !== null ? formatSmartNumber(n, isPremium || isRevenue) : String(val);
                         } else {
-                          displayContent = String(val);
+                          // Check if value is a date serial or date string even if not marked as date
+                          const maybeDate = lowerName.includes('date') ? formatDisplayDate(val) : null;
+                          displayContent = maybeDate ? (
+                            <span className="font-mono text-slate-700 bg-slate-50/80 px-2 py-0.5 rounded border border-slate-200/60 inline-flex items-center gap-1 font-semibold text-[11px]">
+                              {maybeDate}
+                            </span>
+                          ) : String(val);
                         }
                       }
 
