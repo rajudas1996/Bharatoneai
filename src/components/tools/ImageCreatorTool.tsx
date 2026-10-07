@@ -24,6 +24,7 @@ import {
   X
 } from 'lucide-react';
 import { generateAiImage } from '../../utils/aiClient';
+import { safeStorage } from '../../utils/safeStorage';
 
 export interface StylePreset {
   id: string;
@@ -111,19 +112,19 @@ export const ImageCreatorTool: React.FC<ImageCreatorToolProps> = ({
   // Creation history
   const [gallery, setGallery] = useState<GeneratedImage[]>(() => {
     try {
-      const saved = localStorage.getItem('bharat1_image_creator_gallery');
+      const saved = safeStorage.getItem('bharat1_image_creator_gallery');
       if (saved) return JSON.parse(saved);
-    } catch (e) {
+    } catch {
       // ignore
     }
     return [];
   });
 
-  // Save gallery to localStorage
+  // Save gallery to safeStorage
   useEffect(() => {
     try {
-      localStorage.setItem('bharat1_image_creator_gallery', JSON.stringify(gallery.slice(0, 10)));
-    } catch (e) {
+      safeStorage.setItem('bharat1_image_creator_gallery', JSON.stringify(gallery.slice(0, 10)));
+    } catch {
       // ignore
     }
   }, [gallery]);
@@ -484,7 +485,7 @@ export const ImageCreatorTool: React.FC<ImageCreatorToolProps> = ({
     if (onSendToEditor) {
       onSendToEditor(currentImage, prompt);
     } else if (onNavigateTab) {
-      localStorage.setItem('bharat1_active_editor_image', currentImage);
+      safeStorage.setItem('bharat1_active_editor_image', currentImage);
       onNavigateTab('image_edit');
     }
   };

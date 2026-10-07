@@ -28,6 +28,7 @@ import {
   X,
   Sliders
 } from 'lucide-react';
+import { safeStorage } from '../../utils/safeStorage';
 
 interface FilterPreset {
   id: string;
@@ -179,7 +180,7 @@ export const ImageEditorTool: React.FC<ImageEditorToolProps> = ({
       return;
     }
 
-    const saved = localStorage.getItem('bharat1_active_editor_image');
+    const saved = safeStorage.getItem('bharat1_active_editor_image');
     if (saved) {
       setImageSrc(saved);
       setOriginalImageSrc(saved);
@@ -248,11 +249,7 @@ export const ImageEditorTool: React.FC<ImageEditorToolProps> = ({
           const url = event.target.result as string;
           setImageSrc(url);
           setOriginalImageSrc(url);
-          try {
-            localStorage.setItem('bharat1_active_editor_image', url);
-          } catch (err) {
-            // ignore
-          }
+          safeStorage.setItem('bharat1_active_editor_image', url);
           handleResetAll();
         }
       };

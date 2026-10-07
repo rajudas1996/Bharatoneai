@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -28,7 +28,12 @@ import {
   Plus, 
   X,
   Filter,
-  MapPin
+  MapPin,
+  GripVertical,
+  ArrowLeft,
+  ArrowRight,
+  Move,
+  RotateCcw
 } from 'lucide-react';
 import { 
   ColumnMeta, 
@@ -51,6 +56,7 @@ interface DynamicDashboardChartsProps {
   onRemoveChart: (id: string) => void;
   onOpenEditChart: (widget: DynamicChartWidget) => void;
   onOpenAddChart: () => void;
+  onReorderCharts?: (newCharts: DynamicChartWidget[]) => void;
 }
 
 const PALETTE_MAP: Record<string, string[]> = {
@@ -72,7 +78,91 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
   onRemoveChart,
   onOpenEditChart,
   onOpenAddChart,
+  onReorderCharts,
 }) => {
+  // Drag-and-drop reordering state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [fullWidthCharts, setFullWidthCharts] = useState<Set<string>>(new Set());
+  const initialChartsRef = useRef<DynamicChartWidget[]>(charts);
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', String(index));
+    } catch {}
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnter = (index: number) => {
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    // leave
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const updated = [...charts];
+    const [movedItem] = updated.splice(draggedIndex, 1);
+    updated.splice(targetIndex, 0, movedItem);
+
+    if (onReorderCharts) {
+      onReorderCharts(updated);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleMove = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= charts.length) return;
+    const updated = [...charts];
+    const [movedItem] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, movedItem);
+    if (onReorderCharts) {
+      onReorderCharts(updated);
+    }
+  };
+
+  const handleToggleWidth = (widgetId: string) => {
+    setFullWidthCharts((prev) => {
+      const next = new Set(prev);
+      if (next.has(widgetId)) {
+        next.delete(widgetId);
+      } else {
+        next.add(widgetId);
+      }
+      return next;
+    });
+  };
+
+  const handleResetOrder = () => {
+    if (initialChartsRef.current && onReorderCharts) {
+      onReorderCharts([...initialChartsRef.current]);
+    }
+  };
+
   // Cross-filter click handler
   const handleItemClick = (columnKey: string, value: string, chartId: string) => {
     if (!value) return;
@@ -103,7 +193,7 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
         </p>
         <button
           onClick={onOpenAddChart}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors"
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Add Visualization</span>
@@ -113,28 +203,86 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-      {charts.map((widget) => {
-        // If this widget is a map visualization, render DynamicGeoMap!
+    <div className="space-y-4 mb-6">
+      {/* Sequence & Alignment Layout Control Bar */}
+      <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
+            <Move className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+              <span>Visualizations Sequence & Alignment</span>
+              <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-mono font-bold">
+                {charts.length} Visualizations
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Drag handle <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1 rounded">⠿</span> to change sequence order, or click <span className="font-semibold text-slate-700">← / →</span> arrows. Toggle <span className="font-semibold text-slate-700">Full Width / Half Width</span> to change alignment.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleResetOrder}
+            className="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg text-xs font-semibold border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
+            title="Reset sequence order to default"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Sequence</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Grid of Draggable Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {charts.map((widget, index) => {
+        const isFullWidth = fullWidthCharts.has(widget.id);
+        const isDragging = draggedIndex === index;
+        const isDragOver = dragOverIndex === index && draggedIndex !== index;
+        // If this widget is a map visualization, render DynamicGeoMap with drag & drop support!
         if (
           widget.chartType === 'auto_map' ||
           widget.chartType === 'india_map' ||
           widget.chartType === 'world_map'
         ) {
           return (
-            <DynamicGeoMap
+            <div
               key={widget.id}
-              widget={widget}
-              columns={columns}
-              filteredRows={filteredRows}
-              allRows={filteredRows}
-              filterState={filterState}
-              onSetCrossFilter={onSetCrossFilter}
-              onClearCrossFilter={onClearCrossFilter}
-              onUpdateChart={onUpdateChart}
-              onRemoveChart={onRemoveChart}
-              onOpenEditChart={onOpenEditChart}
-            />
+              draggable={true}
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnter={() => handleDragEnter(index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`transition-all duration-200 ${
+                isFullWidth ? 'lg:col-span-2 col-span-1' : 'col-span-1'
+              } ${isDragging ? 'opacity-40 scale-[0.98]' : ''} ${
+                isDragOver ? 'ring-2 ring-red-500 rounded-xl ring-offset-2' : ''
+              }`}
+            >
+              <DynamicGeoMap
+                widget={widget}
+                columns={columns}
+                filteredRows={filteredRows}
+                allRows={filteredRows}
+                filterState={filterState}
+                onSetCrossFilter={onSetCrossFilter}
+                onClearCrossFilter={onClearCrossFilter}
+                onUpdateChart={onUpdateChart}
+                onRemoveChart={onRemoveChart}
+                onOpenEditChart={onOpenEditChart}
+                sequenceNumber={index + 1}
+                totalCharts={charts.length}
+                onMoveLeft={() => handleMove(index, index - 1)}
+                onMoveRight={() => handleMove(index, index + 1)}
+                onToggleWidth={() => handleToggleWidth(widget.id)}
+                isFullWidth={isFullWidth}
+              />
+            </div>
           );
         }
 
@@ -153,12 +301,76 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
         return (
           <div
             key={widget.id}
-            className={`bg-white rounded-xl border p-4 shadow-2xs flex flex-col justify-between transition-all group ${
-              isCurrentlyCrossFilteredSource
-                ? 'border-red-400 ring-2 ring-red-500/10'
-                : 'border-slate-200/90 hover:border-slate-300'
+            draggable={true}
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragEnter={() => handleDragEnter(index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
+            className={`transition-all duration-200 ${
+              isFullWidth ? 'lg:col-span-2 col-span-1' : 'col-span-1'
+            } ${isDragging ? 'opacity-40 scale-[0.98]' : ''} ${
+              isDragOver ? 'ring-2 ring-red-500 rounded-xl ring-offset-2' : ''
             }`}
           >
+            <div
+              className={`bg-white rounded-xl border p-4 shadow-2xs flex flex-col justify-between transition-all group ${
+                isCurrentlyCrossFilteredSource
+                  ? 'border-red-400 ring-2 ring-red-500/10'
+                  : 'border-slate-200/90 hover:border-slate-300'
+              }`}
+            >
+              {/* Sequence & Alignment Reorder Strip */}
+              <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100/90 text-xs select-none">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="cursor-grab active:cursor-grabbing p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors"
+                    title="Click and drag to reorder this visualization"
+                  >
+                    <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-red-600 transition-colors" />
+                    <span className="text-[11px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-full font-mono shadow-xs tracking-wider">
+                      #{index + 1}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+                    Position {index + 1} of {charts.length}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleMove(index, index - 1)}
+                    disabled={index === 0}
+                    className="p-1 rounded text-slate-400 hover:text-slate-800 disabled:opacity-20 hover:bg-slate-100 transition-colors cursor-pointer"
+                    title="Move Left / Earlier in sequence"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMove(index, index + 1)}
+                    disabled={index === charts.length - 1}
+                    className="p-1 rounded text-slate-400 hover:text-slate-800 disabled:opacity-20 hover:bg-slate-100 transition-colors cursor-pointer"
+                    title="Move Right / Later in sequence"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleWidth(widget.id)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ml-1 transition-all cursor-pointer ${
+                      isFullWidth
+                        ? 'bg-red-50 text-red-700 border-red-200 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                    title="Toggle Full Width or Half Width alignment"
+                  >
+                    {isFullWidth ? 'Full Width' : 'Half Width'}
+                  </button>
+                </div>
+              </div>
             {/* Card Header: Title, Category Count Selector, Quick Chart Switcher, Actions */}
             <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
               <div className="flex-1 min-w-0">
@@ -608,8 +820,9 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
               <span className="font-mono">{data.length} items shown</span>
             </div>
           </div>
-        );
-      })}
+        </div>
+      );
+    })}
 
       {/* Add Another Visualization Card at the end */}
       <button
@@ -626,6 +839,7 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
           Choose any detected header and build a Bar, Donut, Line or Leaderboard chart
         </div>
       </button>
+      </div>
     </div>
   );
 };

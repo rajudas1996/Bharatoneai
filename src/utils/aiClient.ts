@@ -5,7 +5,7 @@
 
 export interface ImageGenerationResult {
   imageUrl: string;
-  source: 'gemini-3.1-flash-image-preview' | 'client-synthesis';
+  source: 'gemini-3.1-flash-image-preview' | 'free-ai-pollinations' | 'client-synthesis';
   quotaExceeded?: boolean;
 }
 
@@ -22,12 +22,21 @@ export interface MapsGroundingResult {
 }
 
 /**
- * 1. AI Image Generation using Gemini 3.1 Flash Image Preview
+ * Free Public AI Image Generator (100% Free, No API Key, No Billing Required)
+ */
+export function getFreeAiImageUrl(prompt: string, width = 800, height = 450, seed = 42): string {
+  const cleanPrompt = encodeURIComponent(prompt.trim() || 'futuristic artwork');
+  return `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&nologo=true&seed=${seed}`;
+}
+
+/**
+ * 1. AI Image Generation using Gemini or Free AI Engine
  */
 export async function generateAiImage(
   prompt: string,
   aspectRatio: string = '16:9',
-  imageSize: string = '1K'
+  imageSize: string = '1K',
+  seed: number = 42
 ): Promise<ImageGenerationResult> {
   try {
     const res = await fetch('/api/ai/image/generate', {
@@ -37,16 +46,19 @@ export async function generateAiImage(
     });
 
     if (res.ok) {
-      const data = await res.json();
-      if (data.imageUrl) {
-        return { imageUrl: data.imageUrl, source: 'gemini-3.1-flash-image-preview' };
-      }
-      if (data.quotaExceeded) {
-        return { imageUrl: '', source: 'client-synthesis', quotaExceeded: true };
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        if (data.imageUrl) {
+          return { imageUrl: data.imageUrl, source: 'gemini-3.1-flash-image-preview' };
+        }
+        if (data.quotaExceeded) {
+          return { imageUrl: '', source: 'client-synthesis', quotaExceeded: true };
+        }
       }
     }
   } catch (e) {
-    console.log('Using generative canvas fallback (e.g. static GitHub Pages)');
+    // Expected on static GitHub Pages or offline
   }
 
   // Graceful client synthesis

@@ -47,6 +47,7 @@ import { MusicGeneratorTool } from './components/tools/MusicGeneratorTool';
 import { DatabaseAuthTool } from './components/tools/DatabaseAuthTool';
 import { MapsDataTool } from './components/tools/MapsDataTool';
 import { AllToolsView } from './components/tools/AllToolsView';
+import { safeStorage } from './utils/safeStorage';
 import { ProjectsView } from './components/tools/ProjectsView';
 import { SettingsView } from './components/tools/SettingsView';
 import { HelpSupportView } from './components/tools/HelpSupportView';
@@ -57,20 +58,12 @@ export default function App() {
 
   // Shared active image for Image Editor Studio
   const [activeEditorImage, setActiveEditorImage] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('bharat1_active_editor_image') || null;
-    } catch {
-      return null;
-    }
+    return safeStorage.getItem('bharat1_active_editor_image');
   });
 
   const handleSendImageToEditor = (imgDataUrl: string) => {
     setActiveEditorImage(imgDataUrl);
-    try {
-      localStorage.setItem('bharat1_active_editor_image', imgDataUrl);
-    } catch {
-      // ignore
-    }
+    safeStorage.setItem('bharat1_active_editor_image', imgDataUrl);
     setCurrentTab('image_edit');
   };
 
@@ -103,11 +96,9 @@ export default function App() {
   // User Profile state with safe localStorage persistence
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = window.localStorage.getItem('bharat1_user_profile');
-        if (saved) return JSON.parse(saved);
-      }
-    } catch (e) {}
+      const saved = safeStorage.getItem('bharat1_user_profile');
+      if (saved) return JSON.parse(saved);
+    } catch {}
     return {
       name: 'Raju Das',
       email: 'rajudaszoology22@gmail.com',
@@ -120,11 +111,7 @@ export default function App() {
 
   const handleUpdateProfile = useCallback((profile: UserProfile) => {
     setUserProfile(profile);
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('bharat1_user_profile', JSON.stringify(profile));
-      }
-    } catch (e) {}
+    safeStorage.setItem('bharat1_user_profile', JSON.stringify(profile));
   }, []);
 
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
@@ -563,6 +550,9 @@ export default function App() {
                           setEditingChartWidget(null);
                           setChartDefaultColKey(undefined);
                           setIsChartBuilderOpen(true);
+                        }}
+                        onReorderCharts={(newCharts) => {
+                          setLayoutConfig((prev) => prev ? { ...prev, charts: newCharts } : prev);
                         }}
                       />
 
