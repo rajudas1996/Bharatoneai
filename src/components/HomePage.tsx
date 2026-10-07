@@ -15,8 +15,6 @@ import {
   Bot, 
   SlidersHorizontal 
 } from 'lucide-react';
-import { IndiaMapGraphic } from './IndiaMapGraphic';
-import { IndiaGoogleMapExplorer } from './IndiaGoogleMapExplorer';
 import { Dataset } from '../types/dashboard';
 
 interface HomePageProps {
@@ -34,34 +32,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   return (
     <div className="space-y-6 pb-12 max-w-7xl mx-auto select-none animate-in fade-in duration-200">
-      {/* 1. Hero Banner: Create. Analyze. Automate. with India Map (Compact, matching Attachment 2) */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-white via-white to-red-50/60 border border-red-100/80 p-5 lg:p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Left Content */}
-        <div className="flex-1 z-10 max-w-xl">
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            Create. Analyze. Automate.
-          </h1>
-          <h2 className="text-sm lg:text-base font-bold text-slate-800 mt-1">
-            Your all-in-one AI platform for a smarter India.
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 leading-normal font-normal max-w-lg">
-            Upload your data, generate content, visualize insights and build powerful solutions — all in one place.
-          </p>
-        </div>
-
-        {/* Right Graphic: India Map matching Attachment 2 */}
-        <div className="w-full md:w-[240px] lg:w-[260px] shrink-0 flex items-center justify-end">
-          <IndiaMapGraphic className="w-full" />
-        </div>
-      </div>
-
-      {/* 2. Google Map Under Create. Analyze. Automate. (Requirement 5) */}
-      <IndiaGoogleMapExplorer
-        dataset={dataset}
-        onNavigateToDashboard={onNavigateToDashboard}
-      />
-
-      {/* 3. Interactive Feature Workflow Card: Turn Your Excel Data into Insights */}
+      {/* Feature Workflow Card: Turn Your Excel Data into Insights */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 lg:p-6">
         {/* Card Header */}
         <div className="mb-5">

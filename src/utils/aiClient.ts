@@ -5,7 +5,8 @@
 
 export interface ImageGenerationResult {
   imageUrl: string;
-  source: 'gemini-3.1-flash-image' | 'client-synthesis';
+  source: 'gemini-3.1-flash-image-preview' | 'client-synthesis';
+  quotaExceeded?: boolean;
 }
 
 export interface MusicGenerationResult {
@@ -17,27 +18,31 @@ export interface MusicGenerationResult {
 export interface MapsGroundingResult {
   text: string;
   groundingMetadata?: any;
-  source: 'gemini-3.5-flash-maps' | 'spatial-intelligence';
+  source: 'gemini-3.8-flash' | 'spatial-intelligence';
 }
 
 /**
- * 1. AI Image Generation using Gemini 3.1 Flash Image
+ * 1. AI Image Generation using Gemini 3.1 Flash Image Preview
  */
 export async function generateAiImage(
   prompt: string,
-  aspectRatio: string = '16:9'
+  aspectRatio: string = '16:9',
+  imageSize: string = '1K'
 ): Promise<ImageGenerationResult> {
   try {
     const res = await fetch('/api/ai/image/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, aspectRatio }),
+      body: JSON.stringify({ prompt, aspectRatio, imageSize }),
     });
 
     if (res.ok) {
       const data = await res.json();
       if (data.imageUrl) {
-        return { imageUrl: data.imageUrl, source: 'gemini-3.1-flash-image' };
+        return { imageUrl: data.imageUrl, source: 'gemini-3.1-flash-image-preview' };
+      }
+      if (data.quotaExceeded) {
+        return { imageUrl: '', source: 'client-synthesis', quotaExceeded: true };
       }
     }
   } catch (e) {
@@ -52,7 +57,7 @@ export async function generateAiImage(
 }
 
 /**
- * 2. AI Image Edit using Gemini 3.1 Flash Image
+ * 2. AI Image Edit using Gemini 3.1 Flash Image Preview
  */
 export async function editAiImage(
   imageBase64: string,
@@ -68,7 +73,10 @@ export async function editAiImage(
     if (res.ok) {
       const data = await res.json();
       if (data.imageUrl) {
-        return { imageUrl: data.imageUrl, source: 'gemini-3.1-flash-image' };
+        return { imageUrl: data.imageUrl, source: 'gemini-3.1-flash-image-preview' };
+      }
+      if (data.quotaExceeded) {
+        return { imageUrl: '', source: 'client-synthesis', quotaExceeded: true };
       }
     }
   } catch (e) {
@@ -128,7 +136,7 @@ export async function queryAiMaps(query: string): Promise<MapsGroundingResult> {
         return {
           text: data.text,
           groundingMetadata: data.groundingMetadata,
-          source: 'gemini-3.5-flash-maps',
+          source: 'gemini-3.8-flash',
         };
       }
     }

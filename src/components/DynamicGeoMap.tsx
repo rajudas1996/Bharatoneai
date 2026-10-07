@@ -12,7 +12,15 @@ import {
   TrendingUp, 
   AlertCircle, 
   RefreshCw,
-  Maximize2
+  Maximize2,
+  BarChart3,
+  PieChart as PieIcon,
+  LineChart as LineIcon,
+  AreaChart as AreaIcon,
+  Award,
+  Edit3,
+  Trash2,
+  ChevronDown
 } from 'lucide-react';
 import { 
   ColumnMeta, 
@@ -323,7 +331,7 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
       );
       return geoPath().projection(projection);
     } catch (e) {
-      console.error('Projection fitting error:', e);
+      console.warn('Projection fitting warning:', e);
       return null;
     }
   }, [activeFeatures, svgWidth, svgHeight]);
@@ -351,79 +359,169 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
     return '#991b1b'; // Deep dark red
   };
 
+  const isCurrentlyCrossFilteredSource =
+    filterState.crossFilter?.sourceChartId === widget.id;
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 flex flex-col justify-between transition-all group col-span-1 lg:col-span-2 select-none relative">
-      {/* Top Header: Title, Breadcrumb, Active Scope Switcher, Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center shadow-xs shrink-0">
-            <MapPin className="w-4 h-4" />
+    <div
+      className={`bg-white rounded-xl border p-4 shadow-2xs flex flex-col justify-between transition-all group select-none relative ${
+        isCurrentlyCrossFilteredSource
+          ? 'border-red-400 ring-2 ring-red-500/10'
+          : 'border-slate-200/90 hover:border-slate-300'
+      }`}
+    >
+      {/* Top Header: Title, Active Filter, Quick Chart Switcher, Edit & Actions (Matching Existing Visualizations) */}
+      <div className="flex flex-wrap items-start justify-between gap-2 mb-2.5">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-xs font-bold text-slate-900 truncate" title={widget.title}>
+              {widget.title || 'Geographic Distribution Map'}
+            </h3>
+
+            {filterState.crossFilter?.columnKey === widget.dimensionKey && (
+              <span className="text-[9px] font-bold text-white bg-red-600 px-1.5 py-0.2 rounded-full inline-flex items-center gap-0.5">
+                Filtered: {filterState.crossFilter.value}
+                <button onClick={onClearCrossFilter} className="hover:opacity-75">
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            )}
+
+            {currentlySelectedRegion && filterState.crossFilter?.columnKey !== widget.dimensionKey && (
+              <span className="text-[9px] font-bold text-white bg-red-600 px-1.5 py-0.2 rounded-full inline-flex items-center gap-0.5">
+                Selected: {currentlySelectedRegion}
+                <button onClick={onClearCrossFilter} className="hover:opacity-75">
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            )}
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold text-slate-900 truncate">
-                {widget.title || 'Geographic Distribution Map'}
-              </h3>
 
-              {currentlySelectedRegion && (
-                <span className="text-[10px] font-bold text-white bg-red-600 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-2xs">
-                  <span>Selected: {currentlySelectedRegion}</span>
-                  <button onClick={onClearCrossFilter} className="hover:opacity-75">
-                    <X className="w-2.5 h-2.5" />
-                  </button>
-                </span>
-              )}
-            </div>
-
-            {/* Breadcrumb & Navigation Level */}
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mt-0.5">
-              {activeScope === 'world' ? (
-                <span className="text-slate-600 font-semibold flex items-center gap-1">
-                  <Globe className="w-3 h-3 text-red-600" />
-                  World Overview
-                </span>
-              ) : (
-                <>
-                  <button
-                    onClick={() => {
-                      setActiveScope('world');
-                      setDrilldownState(null);
-                      setZoomLevel(1);
-                    }}
-                    className="hover:text-red-600 hover:underline flex items-center gap-0.5"
-                  >
-                    World
-                  </button>
-                  <ChevronRight className="w-3 h-3 text-slate-300" />
-                  <button
-                    onClick={() => {
-                      setActiveScope('india');
-                      setDrilldownState(null);
-                      setZoomLevel(1);
-                    }}
-                    className={`font-semibold hover:text-red-600 ${
-                      activeScope === 'india' ? 'text-red-600' : 'text-slate-600'
-                    }`}
-                  >
-                    India (States & UTs)
-                  </button>
-
-                  {activeScope === 'district' && drilldownState && (
-                    <>
-                      <ChevronRight className="w-3 h-3 text-slate-300" />
-                      <span className="text-red-600 font-bold">{drilldownState} (Districts)</span>
-                    </>
-                  )}
-                </>
-              )}
-              <span> • Grouped by {widget.dimensionKey}</span>
-            </div>
+          <div className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
+            Grouped by <span className="text-slate-600 font-semibold">{widget.dimensionKey}</span>
+            {widget.metricKey && (
+              <span> • {widget.aggregation.toUpperCase()}({widget.metricKey})</span>
+            )}
+            <span className="text-slate-500 ml-1.5">
+              ({activeScope === 'world' ? 'World' : activeScope === 'district' && drilldownState ? `${drilldownState} Districts` : 'India 36 States/UTs'})
+            </span>
           </div>
         </div>
 
-        {/* Action Controls & Zoom Buttons */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Drilldown Back button */}
+        {/* Quick Chart Type Switcher Icons directly on card header matching other visualizations */}
+        <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-0.5 rounded-lg border border-slate-200">
+          <button
+            onClick={() => onUpdateChart({ ...widget, chartType: 'horizontal_bar' })}
+            className={`p-1 rounded transition-colors ${
+              widget.chartType === 'horizontal_bar'
+                ? 'bg-red-600 text-white shadow-2xs'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+            }`}
+            title="Switch to Horizontal Bar"
+          >
+            <BarChart3 className="w-3 h-3 rotate-90" />
+          </button>
+          <button
+            onClick={() => onUpdateChart({ ...widget, chartType: 'bar' })}
+            className={`p-1 rounded transition-colors ${
+              widget.chartType === 'bar'
+                ? 'bg-red-600 text-white shadow-2xs'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+            }`}
+            title="Switch to Column Bar"
+          >
+            <BarChart3 className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => onUpdateChart({ ...widget, chartType: 'donut' })}
+            className={`p-1 rounded transition-colors ${
+              widget.chartType === 'donut' || widget.chartType === 'pie'
+                ? 'bg-red-600 text-white shadow-2xs'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+            }`}
+            title="Switch to Donut"
+          >
+            <PieIcon className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() =>
+              onUpdateChart({
+                ...widget,
+                chartType: 'line',
+                showTrendOverlay: true,
+              })
+            }
+            className={`p-1 rounded transition-colors ${
+              widget.chartType === 'line'
+                ? 'bg-red-600 text-white shadow-2xs'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+            }`}
+            title="Switch to Line Chart with Moving Average"
+          >
+            <LineIcon className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() =>
+              onUpdateChart({
+                ...widget,
+                chartType: 'area',
+                showTrendOverlay: true,
+              })
+            }
+            className={`p-1 rounded transition-colors ${
+              widget.chartType === 'area'
+                ? 'bg-red-600 text-white shadow-2xs'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+            }`}
+            title="Switch to Area Chart with Moving Average"
+          >
+            <AreaIcon className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => onUpdateChart({ ...widget, chartType: 'metric_leaderboard' })}
+            className={`p-1 rounded transition-colors ${
+              widget.chartType === 'metric_leaderboard'
+                ? 'bg-red-600 text-white shadow-2xs'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+            }`}
+            title="Switch to Leaderboard"
+          >
+            <Award className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => onUpdateChart({ ...widget, chartType: 'auto_map' })}
+            className="p-1 rounded transition-colors bg-red-600 text-white shadow-2xs"
+            title="Active: Map Visualization"
+          >
+            <MapPin className="w-3 h-3" />
+          </button>
+
+          {/* Edit & Delete */}
+          <div className="w-[1px] h-3 bg-slate-300 mx-0.5" />
+          <button
+            onClick={() => onOpenEditChart(widget)}
+            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded transition-colors"
+            title="Customize visualization"
+          >
+            <Edit3 className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => onRemoveChart(widget.id)}
+            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Remove visualization"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Map Rendering Area - 260px height matching existing dashboard visualizations */}
+      <div 
+        ref={containerRef}
+        className="w-full h-[260px] relative bg-slate-50/50 rounded-xl border border-slate-200/80 overflow-hidden flex items-center justify-center select-none"
+      >
+        {/* Floating Scope & Zoom Controls inside map */}
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-xs border border-slate-200/90 rounded-lg p-0.5 shadow-2xs">
           {activeScope === 'district' && (
             <button
               onClick={() => {
@@ -431,9 +529,9 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
                 setDrilldownState(null);
                 setZoomLevel(1);
               }}
-              className="px-2.5 py-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200 shadow-2xs"
+              className="px-1.5 py-0.5 text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
             >
-              ← Back to States
+              ← States
             </button>
           )}
 
@@ -443,65 +541,47 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
                 setActiveScope('world');
                 setZoomLevel(1);
               }}
-              className="px-2.5 py-1 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors border border-slate-200"
+              className="px-1.5 py-0.5 text-[10px] font-bold text-slate-600 hover:bg-slate-100 rounded transition-colors"
             >
-              ← Back to World
+              ← World
             </button>
           )}
 
-          {/* District drill-down trigger for selected state */}
           {activeScope === 'india' && currentlySelectedRegion && (
             <button
               onClick={() => handleDrilldownToDistricts(currentlySelectedRegion)}
-              className="px-2.5 py-1 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-2xs"
+              className="px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-600 hover:bg-red-700 rounded transition-colors shadow-2xs truncate max-w-[90px]"
+              title={`Drill-down: ${currentlySelectedRegion}`}
             >
-              Drill-down: {currentlySelectedRegion}
+              Drill-down
             </button>
           )}
 
-          {/* Zoom In / Out / Reset Controls */}
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5">
-            <button
-              onClick={() => setZoomLevel((z) => Math.min(3, z + 0.3))}
-              className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded"
-              title="Zoom In"
-            >
-              <ZoomIn className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setZoomLevel((z) => Math.max(0.7, z - 0.3))}
-              className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded"
-              title="Zoom Out"
-            >
-              <ZoomOut className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => {
-                setZoomLevel(1);
-                setPanOffset({ x: 0, y: 0 });
-              }}
-              className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded"
-              title="Reset Map View"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
           <button
-            onClick={() => onRemoveChart(widget.id)}
-            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-1"
-            title="Remove Map"
+            onClick={() => setZoomLevel((z) => Math.min(3, z + 0.3))}
+            className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
+            title="Zoom In"
           >
-            <X className="w-3.5 h-3.5" />
+            <ZoomIn className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => setZoomLevel((z) => Math.max(0.7, z - 0.3))}
+            className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => {
+              setZoomLevel(1);
+              setPanOffset({ x: 0, y: 0 });
+            }}
+            className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
+            title="Reset Map View"
+          >
+            <RotateCcw className="w-3 h-3" />
           </button>
         </div>
-      </div>
-
-      {/* Main Map Rendering Area */}
-      <div 
-        ref={containerRef}
-        className="w-full h-[400px] sm:h-[450px] relative bg-slate-50/50 rounded-xl border border-slate-200/80 overflow-hidden flex items-center justify-center select-none"
-      >
         {/* Loading Indicator (only when loading world or district drilldown) */}
         {isLoading && !isUsingPrecomputedIndia && (
           <div className="flex flex-col items-center justify-center gap-2 text-slate-500 z-10">
@@ -712,25 +792,64 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
         )}
 
         {/* Bottom Left Legend & Active Regions Count */}
-        <div className="absolute bottom-2.5 left-2.5 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-lg p-2 shadow-2xs text-[10px] space-y-1">
-          <div className="flex items-center justify-between gap-3 text-slate-600 font-semibold">
-            <span>Intensity Scale</span>
+        <div className="absolute bottom-2 left-2 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-md px-2 py-1 shadow-2xs text-[9px] flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+            <span>Scale:</span>
+            <div className="w-16 h-1.5 rounded-full bg-gradient-to-r from-slate-200 via-red-300 to-red-700" />
             <span className="font-mono text-red-600 font-bold">
-              {formatSmartNumber(regionStats.maxMetricVal, isCurrency)} max
+              {formatSmartNumber(regionStats.maxMetricVal, isCurrency)}
             </span>
-          </div>
-          {/* Gradient Bar */}
-          <div className="w-32 h-2 rounded-full bg-gradient-to-r from-slate-200 via-red-300 to-red-700" />
-          <div className="flex justify-between text-[9px] text-slate-400 font-mono">
-            <span>0</span>
-            <span>Medium</span>
-            <span>High</span>
           </div>
         </div>
 
         {/* Bottom Right Region Coverage Badge */}
-        <div className="absolute bottom-2.5 right-2.5 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-lg px-2.5 py-1 shadow-2xs text-[10px] text-slate-500 font-mono">
-          <span className="font-bold text-slate-800">{Object.keys(regionStats.stats).length}</span> regions active in current view
+        <div className="absolute bottom-2 right-2 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-md px-2 py-1 shadow-2xs text-[9px] text-slate-500 font-mono">
+          <span className="font-bold text-slate-800">{Object.keys(regionStats.stats).length}</span> regions
+        </div>
+      </div>
+
+      {/* UNDER MAP Visualization: Change & Edit the Visualization Option (Matching User Request) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 mt-2 border-t border-slate-100 text-xs">
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+          <MapPin className="w-3.5 h-3.5 text-red-600" />
+          <span>Dimension: <strong className="text-slate-700 font-semibold">{widget.dimensionKey}</strong></span>
+          {widget.metricKey && (
+            <span>• <span className="text-slate-600 font-mono">{widget.aggregation.toUpperCase()}({widget.metricKey})</span></span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {/* Edit Visualization Action Button */}
+          <button
+            onClick={() => onOpenEditChart(widget)}
+            className="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-red-600 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Edit visualization configuration"
+          >
+            <Edit3 className="w-3 h-3 text-red-600" />
+            <span>Edit Visualization</span>
+          </button>
+
+          {/* Change Visualization Dropdown Selector */}
+          <div className="relative inline-flex items-center">
+            <select
+              value={widget.chartType}
+              onChange={(e) => onUpdateChart({ ...widget, chartType: e.target.value as any })}
+              className="text-[11px] font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg pl-2 pr-6 py-1 appearance-none cursor-pointer outline-none transition-colors border border-slate-200"
+              title="Change visualization type"
+            >
+              <option value="auto_map">Change: Auto Map</option>
+              <option value="india_map">Change: India States</option>
+              <option value="world_map">Change: World Map</option>
+              <option value="horizontal_bar">Change: Horizontal Bar</option>
+              <option value="bar">Change: Column Bar</option>
+              <option value="donut">Change: Donut Chart</option>
+              <option value="pie">Change: Pie Chart</option>
+              <option value="line">Change: Line Chart</option>
+              <option value="area">Change: Area Chart</option>
+              <option value="metric_leaderboard">Change: Leaderboard</option>
+            </select>
+            <ChevronDown className="w-3 h-3 text-slate-500 absolute right-1.5 pointer-events-none" />
+          </div>
         </div>
       </div>
     </div>

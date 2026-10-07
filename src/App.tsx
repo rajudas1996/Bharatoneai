@@ -55,6 +55,25 @@ export default function App() {
   // Navigation tab: 'home' is the default landing page matching reference image
   const [currentTab, setCurrentTab] = useState<MainNavTab>('home');
 
+  // Shared active image for Image Editor Studio
+  const [activeEditorImage, setActiveEditorImage] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('bharat1_active_editor_image') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleSendImageToEditor = (imgDataUrl: string) => {
+    setActiveEditorImage(imgDataUrl);
+    try {
+      localStorage.setItem('bharat1_active_editor_image', imgDataUrl);
+    } catch {
+      // ignore
+    }
+    setCurrentTab('image_edit');
+  };
+
   // Main dataset state - in-memory only for uploaded Excel files
   const [dataset, setDataset] = useState<Dataset | null>(null);
 
@@ -562,10 +581,21 @@ export default function App() {
           )}
 
           {/* 3. IMAGE CREATOR TOOL */}
-          {currentTab === 'image_create' && <ImageCreatorTool />}
+          {currentTab === 'image_create' && (
+            <ImageCreatorTool
+              onSendToEditor={handleSendImageToEditor}
+              onNavigateTab={(tab) => setCurrentTab(tab as MainNavTab)}
+            />
+          )}
 
           {/* 4. IMAGE EDIT TOOL */}
-          {currentTab === 'image_edit' && <ImageEditorTool />}
+          {currentTab === 'image_edit' && (
+            <ImageEditorTool
+              initialImage={activeEditorImage}
+              onNavigateToCreator={() => setCurrentTab('image_create')}
+              onNavigateTab={(tab) => setCurrentTab(tab as MainNavTab)}
+            />
+          )}
 
           {/* 5. ANIMATE IMAGE TO VIDEO */}
           {currentTab === 'animate_image' && <AnimateImageTool />}
