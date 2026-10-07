@@ -177,7 +177,11 @@ export const AnimateImageTool: React.FC = () => {
 
           // Live watermark / badge
           ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-          ctx.roundRect(16, h - 34, 150, 22, 6);
+          if (typeof (ctx as any).roundRect === 'function') {
+            (ctx as any).roundRect(16, h - 34, 150, 22, 6);
+          } else {
+            ctx.rect(16, h - 34, 150, 22);
+          }
           ctx.fill();
           ctx.fillStyle = '#f87171';
           ctx.font = 'bold 10px Inter, sans-serif';

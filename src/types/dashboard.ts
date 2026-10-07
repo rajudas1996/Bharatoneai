@@ -90,7 +90,7 @@ export interface DynamicChartWidget {
   showTrendOverlay?: boolean; // For line/area charts (moving average overlay)
   trendPeriod?: number;      // Moving average period (3, 5, 7)
   colorPalette?: 'red' | 'corporate' | 'emerald' | 'amber' | 'blue';
-  geoScope?: 'india' | 'world' | 'district' | 'auto';
+  geoScope?: 'india' | 'world' | 'district' | 'auto' | 'latlon';
   selectedState?: string;
   drilldownDistrict?: string;
   latColumnKey?: string;

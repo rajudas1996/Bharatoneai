@@ -129,7 +129,11 @@ export const TextToVideoTool: React.FC = () => {
 
           // Scene indicator overlay
           ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-          ctx.roundRect(16, 16, 180, 26, 6);
+          if (typeof (ctx as any).roundRect === 'function') {
+            (ctx as any).roundRect(16, 16, 180, 26, 6);
+          } else {
+            ctx.rect(16, 16, 180, 26);
+          }
           ctx.fill();
           ctx.fillStyle = '#10b981';
           ctx.font = 'bold 11px Inter, sans-serif';

@@ -16,6 +16,7 @@ import {
   SlidersHorizontal 
 } from 'lucide-react';
 import { IndiaMapGraphic } from './IndiaMapGraphic';
+import { IndiaGoogleMapExplorer } from './IndiaGoogleMapExplorer';
 import { Dataset } from '../types/dashboard';
 
 interface HomePageProps {
@@ -54,7 +55,13 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </div>
 
-      {/* 2. Interactive Feature Workflow Card: Turn Your Excel Data into Insights */}
+      {/* 2. Google Map Under Create. Analyze. Automate. (Requirement 5) */}
+      <IndiaGoogleMapExplorer
+        dataset={dataset}
+        onNavigateToDashboard={onNavigateToDashboard}
+      />
+
+      {/* 3. Interactive Feature Workflow Card: Turn Your Excel Data into Insights */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 lg:p-6">
         {/* Card Header */}
         <div className="mb-5">

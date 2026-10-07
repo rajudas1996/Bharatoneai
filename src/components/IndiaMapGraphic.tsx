@@ -1,4 +1,5 @@
 import React from 'react';
+import { INDIA_STATE_PATHS } from '../data/indiaStateSvgPaths';
 
 interface IndiaMapGraphicProps {
   className?: string;
@@ -14,7 +15,7 @@ export const IndiaMapGraphic: React.FC<IndiaMapGraphicProps> = ({ className = ''
         className="w-full h-auto max-h-[160px]"
       >
         <defs>
-          {/* Authentic vibrant India gradient matching reference screenshot */}
+          {/* Authentic vibrant India gradient matching Bharat 1 AI red theme */}
           <linearGradient id="bharatMapGrad" x1="15%" y1="0%" x2="85%" y2="100%">
             <stop offset="0%" stopColor="#ef4444" />
             <stop offset="45%" stopColor="#dc2626" />
@@ -37,7 +38,7 @@ export const IndiaMapGraphic: React.FC<IndiaMapGraphicProps> = ({ className = ''
           </linearGradient>
 
           <filter id="indiaShadow" x="-15%" y="-15%" width="130%" height="130%">
-            <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="#dc2626" floodOpacity="0.28" />
+            <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#dc2626" floodOpacity="0.25" />
           </filter>
         </defs>
 
@@ -50,94 +51,49 @@ export const IndiaMapGraphic: React.FC<IndiaMapGraphicProps> = ({ className = ''
           fill="url(#waveRibbon)"
         />
 
-        {/* India Map Geometric Silhouette matching Attachment 2 */}
-        <g transform="translate(100, 8) scale(0.48)" filter="url(#indiaShadow)">
-          {/* Main India Landmass & Northeast */}
-          <path
-            d="M 125 0
-               C 132 10, 142 16, 148 28
-               C 152 38, 165 42, 172 38
-               C 180 34, 188 40, 182 50
-               C 176 58, 185 66, 194 65
-               C 205 63, 218 68, 226 62
-               C 235 56, 245 62, 254 65
-               C 264 68, 275 75, 270 85
-               C 265 92, 250 90, 246 98
-               C 242 104, 250 114, 260 112
-               C 270 110, 280 118, 275 128
-               C 270 135, 258 138, 252 148
-               C 246 156, 238 165, 230 176
-               C 216 195, 204 218, 192 240
-               C 180 262, 168 285, 158 310
-               C 154 320, 146 322, 144 312
-               C 135 288, 124 262, 114 240
-               C 102 212, 94 195, 82 178
-               C 70 160, 52 148, 42 136
-               C 32 124, 20 118, 14 106
-               C 8 92, 22 85, 34 88
-               C 45 92, 54 84, 60 74
-               C 65 62, 56 54, 62 42
-               C 68 30, 82 34, 94 25
-               C 105 16, 116 2, 125 0 Z"
-            fill="url(#bharatMapGrad)"
-          />
+        {/* Official India Map with all 36 States/UTs vector boundaries matching simplemaps.com/svg/country/in */}
+        <g transform="translate(90, 4) scale(0.205)" filter="url(#indiaShadow)">
+          {Object.entries(INDIA_STATE_PATHS).map(([stateName, pathD], idx) => {
+            // Subtle shade variation for distinct adjacent states
+            const fillOpacity = 0.88 + (idx % 4) * 0.04;
+            return (
+              <path
+                key={stateName}
+                d={pathD}
+                fill="url(#bharatMapGrad)"
+                fillOpacity={fillOpacity}
+                stroke="#ffffff"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+                className="hover:brightness-110 transition-all cursor-pointer"
+              />
+            );
+          })}
 
-          {/* Northeast Horn (Seven Sisters) */}
-          <path
-            d="M 246 98
-               C 256 88, 272 90, 284 86
-               C 292 83, 304 88, 316 85
-               C 328 82, 334 94, 324 104
-               C 316 114, 322 126, 310 132
-               C 298 138, 286 130, 280 120
-               C 274 110, 262 114, 254 106 Z"
-            fill="url(#bharatMapGrad)"
-          />
-
-          {/* Internal Curved Neural Pathways (as seen in Attachment 2) */}
-          <path
-            d="M 140 35 C 150 70, 162 110, 152 150 C 142 190, 128 230, 146 295"
-            stroke="#ffffff"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            opacity="0.35"
-          />
-          <path
-            d="M 125 70 C 140 105, 148 145, 140 185 C 132 225, 115 255, 145 305"
-            stroke="#ffffff"
-            strokeWidth="2"
-            strokeLinecap="round"
-            opacity="0.25"
-          />
-
-          {/* Constellation Nodes / Major Tech Hubs */}
+          {/* Major Tech Hub Constellation Nodes */}
           {/* Delhi */}
-          <circle cx="128" cy="85" r="4.5" fill="#ffffff" />
-          <circle cx="128" cy="85" r="8" stroke="#ffffff" strokeWidth="1.2" opacity="0.6" />
+          <circle cx="310" cy="275" r="7" fill="#ffffff" />
+          <circle cx="310" cy="275" r="14" stroke="#ffffff" strokeWidth="2" opacity="0.6" />
 
           {/* Mumbai */}
-          <circle cx="82" cy="180" r="4" fill="#ffffff" />
-          <circle cx="82" cy="180" r="7" stroke="#ffffff" strokeWidth="1" opacity="0.5" />
+          <circle cx="215" cy="485" r="7" fill="#ffffff" />
+          <circle cx="215" cy="485" r="13" stroke="#ffffff" strokeWidth="2" opacity="0.6" />
 
           {/* Bengaluru */}
-          <circle cx="125" cy="245" r="4" fill="#ffffff" />
-          <circle cx="125" cy="245" r="7" stroke="#ffffff" strokeWidth="1" opacity="0.5" />
+          <circle cx="315" cy="620" r="7" fill="#ffffff" />
+          <circle cx="315" cy="620" r="13" stroke="#ffffff" strokeWidth="2" opacity="0.6" />
 
           {/* Hyderabad */}
-          <circle cx="138" cy="195" r="3.5" fill="#ffffff" />
+          <circle cx="340" cy="510" r="6" fill="#ffffff" />
 
           {/* Kolkata */}
-          <circle cx="225" cy="135" r="3.5" fill="#ffffff" />
-
-          {/* Northeast node */}
-          <circle cx="285" cy="105" r="3.5" fill="#ffffff" />
+          <circle cx="560" cy="400" r="6" fill="#ffffff" />
 
           {/* Thin connection lines between nodes */}
-          <line x1="128" y1="85" x2="82" y2="180" stroke="#ffffff" strokeWidth="1" opacity="0.4" strokeDasharray="3 3" />
-          <line x1="128" y1="85" x2="225" y2="135" stroke="#ffffff" strokeWidth="1" opacity="0.4" strokeDasharray="3 3" />
-          <line x1="82" y1="180" x2="138" y2="195" stroke="#ffffff" strokeWidth="1" opacity="0.4" strokeDasharray="3 3" />
-          <line x1="138" y1="195" x2="125" y2="245" stroke="#ffffff" strokeWidth="1" opacity="0.4" strokeDasharray="3 3" />
-          <line x1="225" y1="135" x2="285" y2="105" stroke="#ffffff" strokeWidth="1" opacity="0.4" strokeDasharray="3 3" />
+          <line x1="310" y1="275" x2="215" y2="485" stroke="#ffffff" strokeWidth="2" opacity="0.45" strokeDasharray="5 5" />
+          <line x1="310" y1="275" x2="560" y2="400" stroke="#ffffff" strokeWidth="2" opacity="0.45" strokeDasharray="5 5" />
+          <line x1="215" y1="485" x2="340" y2="510" stroke="#ffffff" strokeWidth="2" opacity="0.45" strokeDasharray="5 5" />
+          <line x1="340" y1="510" x2="315" y2="620" stroke="#ffffff" strokeWidth="2" opacity="0.45" strokeDasharray="5 5" />
         </g>
       </svg>
     </div>

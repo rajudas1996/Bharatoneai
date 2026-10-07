@@ -11,7 +11,9 @@ import {
   TrendingUp, 
   Sparkles,
   Check,
-  ChevronDown
+  ChevronDown,
+  MapPin,
+  Globe
 } from 'lucide-react';
 import { 
   ColumnMeta, 
@@ -21,6 +23,7 @@ import {
   AggregationType 
 } from '../types/dashboard';
 import { aggregateChartData } from '../utils/dashboardBuilder';
+import { validateColumnAsIndianState, validateColumnAsCountry } from '../utils/geoUtils';
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -49,6 +52,9 @@ interface ChartBuilderModalProps {
 }
 
 const CHART_TYPES: { id: ChartType; label: string; icon: any; desc: string }[] = [
+  { id: 'auto_map', label: 'Auto Map', icon: MapPin, desc: 'Auto-detect India State/UT or World map' },
+  { id: 'india_map', label: 'India Map', icon: MapPin, desc: 'Official 36 State/UT Choropleth Map' },
+  { id: 'world_map', label: 'World Map', icon: Globe, desc: 'Global Country Distribution & Drilldown' },
   { id: 'horizontal_bar', label: 'Horizontal Bar', icon: BarChart3, desc: 'Ranking categories and metrics horizontally' },
   { id: 'bar', label: 'Column Bar', icon: BarChart3, desc: 'Vertical bars for comparison' },
   { id: 'donut', label: 'Donut Chart', icon: PieIcon, desc: 'Proportions of categories (2-8 items)' },
@@ -124,14 +130,49 @@ export const ChartBuilderModal: React.FC<ChartBuilderModalProps> = ({
     }
   }, [isOpen, initialWidget, defaultColumnKey, columns, numericColumns]);
 
+  const isGeoDimension = useMemo(() => {
+    if (!dimensionKey) return false;
+    const isState = validateColumnAsIndianState(dimensionKey, rows).isValid;
+    const isCountry = validateColumnAsCountry(dimensionKey, rows).isValid;
+    const col = columns.find((c) => c.key === dimensionKey);
+    const name = (col?.name || '').toLowerCase();
+    const isNameGeo =
+      name.includes('state') ||
+      name.includes('country') ||
+      name.includes('nation') ||
+      name.includes('city') ||
+      name.includes('region') ||
+      name.includes('district');
+    return isState || isCountry || isNameGeo;
+  }, [dimensionKey, rows, columns]);
+
+  const availableChartTypes = useMemo(() => {
+    if (isGeoDimension) {
+      return CHART_TYPES;
+    }
+    return CHART_TYPES.filter(
+      (t) => t.id !== 'auto_map' && t.id !== 'india_map' && t.id !== 'world_map'
+    );
+  }, [isGeoDimension]);
+
   // Handle Dimension Change
   const handleDimensionChange = (key: string) => {
     setDimensionKey(key);
     const col = columns.find((c) => c.key === key);
-    if (col?.type === 'date' && chartType !== 'line' && chartType !== 'area') {
+    const isState = validateColumnAsIndianState(key, rows).isValid;
+    const isCountry = validateColumnAsCountry(key, rows).isValid;
+    const name = (col?.name || '').toLowerCase();
+    const isGeo = isState || isCountry || name.includes('state') || name.includes('country');
+
+    if (isGeo) {
+      setChartType('auto_map');
+    } else if (col?.type === 'date' && chartType !== 'line' && chartType !== 'area') {
       setChartType('line');
       setShowTrendOverlay(true);
+    } else if (chartType === 'auto_map' || chartType === 'india_map' || chartType === 'world_map') {
+      setChartType('horizontal_bar');
     }
+
     // Update title suggestion
     const metricCol = columns.find((c) => c.key === metricKey);
     const metricLabel = metricCol ? `Total ${metricCol.name}` : 'Records';
@@ -266,7 +307,7 @@ export const ChartBuilderModal: React.FC<ChartBuilderModalProps> = ({
                 Visualization Type
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {CHART_TYPES.map((t) => {
+                {availableChartTypes.map((t) => {
                   const Icon = t.icon;
                   const isSelected = chartType === t.id;
                   return (
@@ -478,6 +519,23 @@ export const ChartBuilderModal: React.FC<ChartBuilderModalProps> = ({
                   {previewData.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
                       No data available for this field configuration
+                    </div>
+                  ) : chartType === 'auto_map' || chartType === 'india_map' || chartType === 'world_map' ? (
+                    <div className="h-full flex flex-col items-center justify-center p-4 bg-slate-50/70 rounded-xl border border-dashed border-red-200 text-center">
+                      <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mb-2 shadow-2xs">
+                        <MapPin className="w-6 h-6 text-red-600" />
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-800">
+                        {chartType === 'world_map' ? 'Global World Map' : 'India State / UT Geographic Map'}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 max-w-xs mt-1">
+                        Choropleth color scale across {previewData.length} detected regions based on {metricKey ? `${aggregation} of ${metricKey}` : 'records count'}. Full interactive vector map rendered on dashboard.
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-3">
+                        <span className="text-[10px] font-mono text-slate-400">Min</span>
+                        <div className="w-24 h-2 rounded-full bg-gradient-to-r from-red-100 via-red-400 to-red-700" />
+                        <span className="text-[10px] font-mono text-slate-400">Max</span>
+                      </div>
                     </div>
                   ) : chartType === 'horizontal_bar' ? (
                     <ResponsiveContainer width="100%" height="100%">

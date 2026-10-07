@@ -81,11 +81,13 @@ export default function App() {
 
   const [isFilterConfigOpen, setIsFilterConfigOpen] = useState(false);
 
-  // User Profile state with localStorage persistence
+  // User Profile state with safe localStorage persistence
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
-      const saved = localStorage.getItem('bharat1_user_profile');
-      if (saved) return JSON.parse(saved);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem('bharat1_user_profile');
+        if (saved) return JSON.parse(saved);
+      }
     } catch (e) {}
     return {
       name: 'Raju Das',
@@ -100,7 +102,9 @@ export default function App() {
   const handleUpdateProfile = useCallback((profile: UserProfile) => {
     setUserProfile(profile);
     try {
-      localStorage.setItem('bharat1_user_profile', JSON.stringify(profile));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('bharat1_user_profile', JSON.stringify(profile));
+      }
     } catch (e) {}
   }, []);
 

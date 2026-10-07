@@ -92,27 +92,28 @@ export const ImageCreatorTool: React.FC = () => {
     }
 
     setTimeout(() => {
-      const canvas = document.createElement('canvas');
-      let w = 800;
-      let h = 450;
-      if (aspect === '1:1') { w = 600; h = 600; }
-      else if (aspect === '9:16') { w = 450; h = 800; }
-      else if (aspect === '4:3') { w = 800; h = 600; }
+      try {
+        const canvas = document.createElement('canvas');
+        let w = 800;
+        let h = 450;
+        if (aspect === '1:1') { w = 600; h = 600; }
+        else if (aspect === '9:16') { w = 450; h = 800; }
+        else if (aspect === '4:3') { w = 800; h = 600; }
 
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-      // Deterministic pseudo-random seed based on prompt string
-      let seed = 0;
-      for (let i = 0; i < promptText.length; i++) {
-        seed = (seed * 31 + promptText.charCodeAt(i)) % 1000000;
-      }
-      const pseudoRandom = () => {
-        seed = (seed * 9301 + 49297) % 233280;
-        return seed / 233280;
-      };
+        // Deterministic pseudo-random seed based on prompt string
+        let seed = 0;
+        for (let i = 0; i < promptText.length; i++) {
+          seed = (seed * 31 + promptText.charCodeAt(i)) % 1000000;
+        }
+        const pseudoRandom = () => {
+          seed = (seed * 9301 + 49297) % 233280;
+          return seed / 233280;
+        };
 
       // 1. Rich Background Gradient according to style
       const bgGrad = ctx.createLinearGradient(0, 0, w, h);
@@ -221,28 +222,36 @@ export const ImageCreatorTool: React.FC = () => {
       // 6. Watermark Badge
       ctx.save();
       ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
-      ctx.roundRect(16, h - 38, 140, 24, 6);
+      if (typeof (ctx as any).roundRect === 'function') {
+        (ctx as any).roundRect(16, h - 38, 140, 24, 6);
+      } else {
+        ctx.rect(16, h - 38, 140, 24);
+      }
       ctx.fill();
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 10px Inter, system-ui, sans-serif';
       ctx.fillText('⚡ Bharat 1 AI Studio', 26, h - 22);
       ctx.restore();
 
-      const dataUrl = canvas.toDataURL('image/png');
-      setCurrentImage(dataUrl);
+        const dataUrl = canvas.toDataURL('image/png');
+        setCurrentImage(dataUrl);
 
-      const newItem: GeneratedImage = {
-        id: String(Date.now()),
-        prompt: promptText,
-        style: styleId,
-        aspect,
-        timestamp: new Date().toLocaleTimeString(),
-        dataUrl,
-      };
+        const newItem: GeneratedImage = {
+          id: String(Date.now()),
+          prompt: promptText,
+          style: styleId,
+          aspect,
+          timestamp: new Date().toLocaleTimeString(),
+          dataUrl,
+        };
 
-      setGallery((prev) => [newItem, ...prev.slice(0, 7)]);
-      setIsGenerating(false);
-    }, 700);
+        setGallery((prev) => [newItem, ...prev.slice(0, 7)]);
+      } catch (err) {
+        console.error('Error generating image synthesis:', err);
+      } finally {
+        setIsGenerating(false);
+      }
+    }, 400);
   };
 
   // Initial generation on first mount

@@ -28,6 +28,7 @@ import {
   INDIAN_STATES_CANONICAL
 } from '../utils/geoUtils';
 import { formatSmartNumber, parseNumericValue } from '../utils/numberFormat';
+import { INDIA_STATE_PATHS } from '../data/indiaStateSvgPaths';
 
 interface DynamicGeoMapProps {
   widget: DynamicChartWidget;
@@ -88,17 +89,17 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Determine current GeoJSON URL based on activeScope & drilldown
+  // Determine current GeoJSON asset path based on activeScope & drilldown
   const geoUrl = useMemo(() => {
+    const base = import.meta.env.BASE_URL || './';
+    const cleanBase = base.endsWith('/') ? base : `${base}/`;
     if (activeScope === 'world') {
-      return '/maps/world.json';
+      return `${cleanBase}maps/world.json`;
     }
     if (activeScope === 'district' && drilldownState) {
-      // Use full India districts file and filter to this state
-      return '/maps/india.json';
+      return `${cleanBase}maps/india.json`;
     }
-    // Default: India state/UT map
-    return '/maps/india-states.json';
+    return `${cleanBase}maps/india-states.json`;
   }, [activeScope, drilldownState]);
 
   // Load GeoJSON with caching and error retry
@@ -113,7 +114,15 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
     }
 
     try {
-      const res = await fetch(geoUrl);
+      let res = await fetch(geoUrl);
+      if (!res.ok) {
+        // Fallback to CDN for India boundaries
+        if (activeScope === 'india' || activeScope === 'district') {
+          res = await fetch('https://cdn.jsdelivr.net/gh/udit-001/india-maps-data@2884453/geojson/india.geojson');
+        } else if (activeScope === 'world') {
+          res = await fetch('https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson');
+        }
+      }
       if (!res.ok) {
         throw new Error(`Failed to load map data (${res.status})`);
       }
@@ -122,11 +131,17 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
       setGeoData(data);
       setIsLoading(false);
     } catch (err: any) {
-      console.error('GeoJSON loading error:', err);
-      setLoadError('Map data could not be loaded. Please check network connection.');
-      setIsLoading(false);
+      console.warn('GeoJSON network load failed, checking fallback:', err);
+      // For India states, we have instant precomputed vector paths from INDIA_STATE_PATHS
+      if (activeScope === 'india') {
+        setIsLoading(false);
+        setLoadError(null);
+      } else {
+        setLoadError('Map data could not be loaded. Please check network connection.');
+        setIsLoading(false);
+      }
     }
-  }, [geoUrl]);
+  }, [geoUrl, activeScope]);
 
   useEffect(() => {
     loadGeoJSON();
@@ -267,6 +282,9 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
     setZoomLevel(1);
     setPanOffset({ x: 0, y: 0 });
   };
+
+  // Use instant precomputed India vector paths for state-level view
+  const isUsingPrecomputedIndia = activeScope === 'india' && !drilldownState;
 
   // Filter features if in district drilldown mode
   const activeFeatures = useMemo(() => {
@@ -484,8 +502,8 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
         ref={containerRef}
         className="w-full h-[400px] sm:h-[450px] relative bg-slate-50/50 rounded-xl border border-slate-200/80 overflow-hidden flex items-center justify-center select-none"
       >
-        {/* Loading Indicator */}
-        {isLoading && (
+        {/* Loading Indicator (only when loading world or district drilldown) */}
+        {isLoading && !isUsingPrecomputedIndia && (
           <div className="flex flex-col items-center justify-center gap-2 text-slate-500 z-10">
             <RefreshCw className="w-6 h-6 animate-spin text-red-600" />
             <span className="text-xs font-semibold">Loading official geographic map boundaries...</span>
@@ -493,7 +511,7 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
         )}
 
         {/* Fallback Error with Retry Button (Requirement 18) */}
-        {!isLoading && loadError && (
+        {!isLoading && loadError && !isUsingPrecomputedIndia && (
           <div className="flex flex-col items-center justify-center p-6 text-center max-w-sm z-10 bg-white rounded-2xl border border-slate-200 shadow-sm">
             <AlertCircle className="w-8 h-8 text-rose-500 mb-2" />
             <h4 className="text-xs font-bold text-slate-800 mb-1">Map data could not be loaded.</h4>
@@ -510,8 +528,76 @@ export const DynamicGeoMap: React.FC<DynamicGeoMapProps> = ({
           </div>
         )}
 
-        {/* SVG Map Canvas */}
-        {!isLoading && !loadError && pathGenerator && (
+        {/* 1. Precomputed India State Vector Map (Instant 0ms display for all 36 States & UTs) */}
+        {isUsingPrecomputedIndia && (
+          <svg
+            ref={svgRef}
+            viewBox="0 0 800 800"
+            className="w-full h-full max-h-full transition-transform duration-200"
+            style={{
+              transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+              cursor: 'grab',
+            }}
+          >
+            <defs>
+              <filter id="mapSelectedGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#dc2626" floodOpacity="0.45" />
+              </filter>
+            </defs>
+
+            <g>
+              {Object.entries(INDIA_STATE_PATHS).map(([stateName, pathD]) => {
+                const statKey = normalizeStateName(stateName) || stateName;
+                const stat = regionStats.stats[statKey] || { count: 0, sum: 0, min: 0, max: 0 };
+                const metricValue = widget.metricKey && widget.aggregation === 'sum' 
+                  ? stat.sum 
+                  : widget.metricKey && widget.aggregation === 'avg' && stat.count > 0 
+                    ? stat.sum / stat.count 
+                    : stat.count;
+
+                const isSelected = currentlySelectedRegion === statKey || currentlySelectedRegion === stateName;
+                const fillColor = getChoroplethColor(metricValue, isSelected);
+
+                return (
+                  <path
+                    key={stateName}
+                    d={pathD}
+                    fill={fillColor}
+                    stroke={isSelected ? '#7f1d1d' : '#ffffff'}
+                    strokeWidth={isSelected ? 2.5 : 1}
+                    strokeLinejoin="round"
+                    filter={isSelected ? 'url(#mapSelectedGlow)' : undefined}
+                    className="transition-all duration-150 cursor-pointer hover:brightness-90 hover:stroke-slate-900 hover:stroke-[2px]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRegionClick(stateName);
+                    }}
+                    onMouseMove={(e) => {
+                      const rect = containerRef.current?.getBoundingClientRect();
+                      if (rect) {
+                        const totalRowsCount = Math.max(1, regionStats.totalCount);
+                        const share = Math.round((stat.count / totalRowsCount) * 1000) / 10;
+                        setHoveredRegion({
+                          name: stateName,
+                          count: stat.count,
+                          value: metricValue,
+                          sharePct: share,
+                          formattedValue: formatSmartNumber(metricValue, isCurrency),
+                          x: e.clientX - rect.left,
+                          y: e.clientY - rect.top,
+                        });
+                      }
+                    }}
+                    onMouseLeave={() => setHoveredRegion(null)}
+                  />
+                );
+              })}
+            </g>
+          </svg>
+        )}
+
+        {/* 2. Dynamic D3 Geo Projection for World & District Drilldowns */}
+        {!isUsingPrecomputedIndia && !isLoading && !loadError && pathGenerator && (
           <svg
             ref={svgRef}
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}

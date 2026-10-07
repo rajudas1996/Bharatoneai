@@ -27,7 +27,8 @@ import {
   TrendingUp, 
   Plus, 
   X,
-  Filter
+  Filter,
+  MapPin
 } from 'lucide-react';
 import { 
   ColumnMeta, 
@@ -37,6 +38,7 @@ import {
   ChartType 
 } from '../types/dashboard';
 import { aggregateChartData } from '../utils/dashboardBuilder';
+import { DynamicGeoMap } from './DynamicGeoMap';
 
 interface DynamicDashboardChartsProps {
   charts: DynamicChartWidget[];
@@ -113,6 +115,29 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
       {charts.map((widget) => {
+        // If this widget is a map visualization, render DynamicGeoMap!
+        if (
+          widget.chartType === 'auto_map' ||
+          widget.chartType === 'india_map' ||
+          widget.chartType === 'world_map'
+        ) {
+          return (
+            <DynamicGeoMap
+              key={widget.id}
+              widget={widget}
+              columns={columns}
+              filteredRows={filteredRows}
+              allRows={filteredRows}
+              filterState={filterState}
+              onSetCrossFilter={onSetCrossFilter}
+              onClearCrossFilter={onClearCrossFilter}
+              onUpdateChart={onUpdateChart}
+              onRemoveChart={onRemoveChart}
+              onOpenEditChart={onOpenEditChart}
+            />
+          );
+        }
+
         // Calculate all categories count and the active data slice
         const allCategoriesData = aggregateChartData({ ...widget, topN: 0 }, filteredRows, columns);
         const data = aggregateChartData(widget, filteredRows, columns);
@@ -260,6 +285,13 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
                   title="Switch to Leaderboard"
                 >
                   <Award className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => onUpdateChart({ ...widget, chartType: 'auto_map' })}
+                  className="p-1 rounded transition-colors text-slate-400 hover:text-slate-700 hover:bg-slate-200"
+                  title="Switch to Geographic Map"
+                >
+                  <MapPin className="w-3 h-3" />
                 </button>
 
                 {/* Edit & Delete */}

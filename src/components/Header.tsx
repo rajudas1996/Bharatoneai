@@ -28,17 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Empty left side - removed heading per user request */}
       </div>
 
-      {/* Right Actions: Help, Bell, Upgrade Button, Profile Avatar */}
+      {/* Right Actions: Bell, Upgrade Button, Profile Avatar (Question mark removed from header per user request) */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* Help Icon */}
-        <button
-          onClick={onOpenHelp}
-          className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
-          title="Help & Support"
-        >
-          <HelpCircle className="w-5 h-5 text-slate-600" />
-        </button>
-
         {/* Notification Bell with Red Badge "3" */}
         <button
           className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
