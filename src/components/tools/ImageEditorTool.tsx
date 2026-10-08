@@ -26,7 +26,8 @@ import {
   Copy,
   ArrowLeft,
   X,
-  Sliders
+  Sliders,
+  Film
 } from 'lucide-react';
 import { safeStorage } from '../../utils/safeStorage';
 
@@ -458,6 +459,14 @@ export const ImageEditorTool: React.FC<ImageEditorToolProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleSendToAnimate = () => {
+    if (!imageSrc) return;
+    safeStorage.setItem('bharat1_active_editor_image', imageSrc);
+    if (onNavigateTab) {
+      onNavigateTab('animate_image');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 animate-in fade-in duration-200">
       {/* Page Header */}
@@ -511,6 +520,15 @@ export const ImageEditorTool: React.FC<ImageEditorToolProps> = ({
           >
             <Wand2 className="w-3.5 h-3.5" />
             <span>AI Auto-Enhance</span>
+          </button>
+
+          <button
+            onClick={handleSendToAnimate}
+            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-98"
+            title="Send edited image to Image-to-Video Animation studio"
+          >
+            <Film className="w-3.5 h-3.5" />
+            <span>Animate to Video</span>
           </button>
 
           <button

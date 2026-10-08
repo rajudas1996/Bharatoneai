@@ -3,13 +3,14 @@ import {
   Sparkles, 
   BarChart3, 
   Image as ImageIcon, 
-  SlidersHorizontal, 
-  Film, 
   Video, 
   Music, 
-  Database, 
   MapPin, 
-  ArrowRight 
+  ArrowRight,
+  Briefcase,
+  Folder,
+  Settings,
+  Lock
 } from 'lucide-react';
 import { MainNavTab } from '../Sidebar';
 
@@ -20,13 +21,13 @@ interface AllToolsViewProps {
 export const AllToolsView: React.FC<AllToolsViewProps> = ({ onSelectTab }) => {
   const tools = [
     { id: 'dashboard' as MainNavTab, title: 'Live Dashboard', desc: 'Convert Excel files into interactive dashboards with charts and filters', icon: BarChart3, color: 'bg-red-600' },
-    { id: 'image_create' as MainNavTab, title: 'Image Creator', desc: 'Generate photorealistic and artistic imagery from text prompts', icon: ImageIcon, color: 'bg-purple-600' },
-    { id: 'image_edit' as MainNavTab, title: 'Image Edit', desc: 'Real-time photo editing, color grading, adjustments, and transforms', icon: SlidersHorizontal, color: 'bg-emerald-600' },
-    { id: 'animate_image' as MainNavTab, title: 'Animate Image to Video', desc: 'Transform still photos into motion videos with cinematic cameras', icon: Film, color: 'bg-amber-500' },
-    { id: 'text_to_video' as MainNavTab, title: 'Text to Video', desc: 'Generate complete 4K cinematic video sequences from scene scripts', icon: Video, color: 'bg-blue-500' },
+    { id: 'sales_crm' as MainNavTab, title: 'Sales CRM', desc: 'Track deals, sales pipeline, client contacts, and revenue forecasts', icon: Briefcase, color: 'bg-blue-600' },
+    { id: 'image_editor' as MainNavTab, title: 'Image Editor', desc: 'AI image generation and studio canvas editing with filters and effects', icon: ImageIcon, color: 'bg-purple-600' },
+    { id: 'video_editor' as MainNavTab, title: 'Video Editor', desc: 'Generate cinematic video scenes or animate still images with motion', icon: Video, color: 'bg-amber-500' },
     { id: 'music_gen' as MainNavTab, title: 'Music Generation', desc: 'Synthesize original beats, classical Indian ragas, and soundtracks', icon: Music, color: 'bg-purple-500' },
-    { id: 'database_auth' as MainNavTab, title: 'Database & Auth', desc: 'Manage tables, user roles (RBAC), and test secured API endpoints', icon: Database, color: 'bg-red-500' },
     { id: 'maps_data' as MainNavTab, title: 'Maps Data', desc: 'Spatial intelligence, regional hubs, and revenue analytics across India', icon: MapPin, color: 'bg-emerald-500' },
+    { id: 'projects' as MainNavTab, title: 'Projects', desc: 'Manage saved exports, uploaded workbooks, and generated assets', icon: Folder, color: 'bg-amber-600' },
+    { id: 'settings' as MainNavTab, title: 'Settings', desc: 'Database & Auth manager (Admin protected: raju1234) and system settings', icon: Settings, color: 'bg-slate-800' },
   ];
 
   return (

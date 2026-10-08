@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { ColumnMeta, ColumnRole, ColumnType, DataRow, Dataset } from '../types/dashboard';
+import { ColumnMeta, ColumnRole, ColumnType, DataRow, Dataset, DynamicChartWidget, DynamicKPIWidget } from '../types/dashboard';
 import { parseNumericValue, formatDisplayDate } from './numberFormat';
 
 export function isDateColumnHeader(header: string): boolean {
@@ -315,6 +315,74 @@ function detectColumnRole(lowerHeader: string, type: ColumnType): ColumnRole {
   }
 
   return 'general';
+}
+
+export function syncVisualizationsToWorkbook(
+  workbook: XLSX.WorkBook,
+  charts: DynamicChartWidget[],
+  kpis: DynamicKPIWidget[] = []
+): XLSX.WorkBook {
+  try {
+    const vizData = charts.map((c, idx) => ({
+      'Seq #': idx + 1,
+      'Chart Title': c.title,
+      'Visualization Type': c.chartType.toUpperCase().replace('_', ' '),
+      'Dimension (X-Axis)': c.dimensionKey,
+      'Metric (Y-Axis)': c.metricKey || '(Count of Records)',
+      'Aggregation': c.aggregation.toUpperCase(),
+      'Color Palette': c.colorPalette || 'red',
+      'Scope / Details': c.geoScope ? `Geo (${c.geoScope})` : 'Standard View',
+      'Last Modified': new Date().toLocaleString(),
+    }));
+
+    // Also include KPI summaries if present
+    if (kpis && kpis.length > 0) {
+      kpis.forEach((k, idx) => {
+        vizData.push({
+          'Seq #': charts.length + idx + 1,
+          'Chart Title': `[KPI] ${k.title}`,
+          'Visualization Type': 'KPI STAT CARD',
+          'Dimension (X-Axis)': 'Total Dataset',
+          'Metric (Y-Axis)': k.columnKey || 'Record Count',
+          'Aggregation': k.aggregation.toUpperCase(),
+          'Color Palette': 'amber',
+          'Scope / Details': k.format ? `Format: ${k.format}` : 'Standard Number',
+          'Last Modified': new Date().toLocaleString(),
+        });
+      });
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(vizData);
+    worksheet['!cols'] = [
+      { wch: 8 },
+      { wch: 32 },
+      { wch: 22 },
+      { wch: 26 },
+      { wch: 26 },
+      { wch: 16 },
+      { wch: 15 },
+      { wch: 22 },
+      { wch: 22 },
+    ];
+
+    const sheetName = 'Dashboard_Visualizations';
+    workbook.Sheets[sheetName] = worksheet;
+    if (!workbook.SheetNames.includes(sheetName)) {
+      workbook.SheetNames.push(sheetName);
+    }
+  } catch (err) {
+    console.warn('Could not sync visualizations sheet into workbook:', err);
+  }
+  return workbook;
+}
+
+export function downloadUpdatedWorkbook(
+  workbook: XLSX.WorkBook,
+  baseFileName = 'bharat1_workbook'
+) {
+  const cleanBase = baseFileName.replace(/\.[^/.]+$/, '');
+  const outName = `${cleanBase}_updated_visualizations_${Date.now()}.xlsx`;
+  XLSX.writeFile(workbook, outName);
 }
 
 export function exportFilteredToExcel(

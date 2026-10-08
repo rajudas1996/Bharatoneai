@@ -9,26 +9,101 @@
     <meta property="og:description" content="Your all-in-one AI platform for a smarter India. Upload your data, generate content, visualize insights and build powerful solutions." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- 1. Bulletproof Base Tag Injector for GitHub Pages & Subfolder Deployments -->
+    <script>
+      (function() {
+        try {
+          var p = window.location.pathname || '/';
+          var isFile = p.split('/').pop().indexOf('.') !== -1;
+          var dir = isFile ? p.substring(0, p.lastIndexOf('/') + 1) : (p.endsWith('/') ? p : p + '/');
+
+          // Ensure base tag is present pointing to the actual folder
+          var baseEl = document.createElement('base');
+          baseEl.href = window.location.origin + dir;
+          document.head.appendChild(baseEl);
+
+          // If path is missing trailing slash on GitHub Pages or custom host, normalize without reload flicker
+          if (!isFile && !p.endsWith('/') && window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', dir + window.location.search + window.location.hash);
+          }
+        } catch (e) {}
+
+        // 2. Safe Storage Polyfill for Incognito Mode / Restricted Storage Browsers
+        try {
+          var testKey = '__storage_test__';
+          window.localStorage.setItem(testKey, testKey);
+          window.localStorage.removeItem(testKey);
+        } catch (e) {
+          var memoryStore = {};
+          var mockStorage = {
+            getItem: function(k) { return memoryStore[k] || null; },
+            setItem: function(k, v) { memoryStore[k] = String(v); },
+            removeItem: function(k) { delete memoryStore[k]; },
+            clear: function() { memoryStore = {}; },
+            key: function(i) { return Object.keys(memoryStore)[i] || null; },
+            get length() { return Object.keys(memoryStore).length; }
+          };
+          try {
+            Object.defineProperty(window, 'localStorage', { value: mockStorage, configurable: true, writable: true });
+            Object.defineProperty(window, 'sessionStorage', { value: mockStorage, configurable: true, writable: true });
+          } catch (e2) {}
+        }
+
+        window.process = window.process || { env: {} };
+        window.global = window.global || window;
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <script>
-      // 1. Ensure trailing slash for GitHub Pages repo deployments so relative assets load properly
-      if (
-        window.location.hostname.endsWith('github.io') &&
-        window.location.pathname &&
-        !window.location.pathname.endsWith('/') &&
-        !window.location.pathname.split('/').pop().includes('.')
-      ) {
-        window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
-      }
-      window.process = window.process || { env: {} };
-      window.global = window.global || window;
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-500 selection:text-white">
-    <div id="root"></div>
+  <body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-red-500 selection:text-white">
+    <!-- Initial Loading & Fallback Shell (Replaced by React once mounted) -->
+    <div id="root">
+      <div id="initial-loader-container" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; padding: 24px; text-align: center;">
+        <div style="max-width: 420px; width: 100%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 32px 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);">
+          <!-- Bharat 1 AI Red Logo Badge -->
+          <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: #dc2626; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 18px; box-shadow: 0 2px 8px rgba(220,38,38,0.3);">
+              B
+            </div>
+            <span style="font-size: 20px; font-weight: 900; letter-spacing: -0.5px; color: #dc2626;">
+              Bharat 1 AI
+            </span>
+          </div>
+
+          <div style="width: 36px; height: 36px; border: 3px solid #fee2e2; border-top-color: #dc2626; border-radius: 50%; margin: 12px auto 16px; animation: b1-spin 0.8s linear infinite;"></div>
+
+          <h2 style="font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Loading Dashboard & AI Studio</h2>
+          <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 20px;">
+            Initializing workspace, intelligent visualizers, and multimodal models...
+          </p>
+
+          <div id="loader-error-box" style="display: none; margin-bottom: 16px; padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; font-size: 11px; color: #991b1b; font-family: monospace; text-align: left;"></div>
+
+          <button onclick="window.location.reload()" style="background: #dc2626; color: white; border: none; padding: 9px 20px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 6px rgba(220,38,38,0.25);">
+            Reload Application
+          </button>
+        </div>
+      </div>
+      <style>
+        @keyframes b1-spin { to { transform: rotate(360deg); } }
+      </style>
+    </div>
+
+    <!-- Error Detection Watchdog -->
+    <script>
+      window.addEventListener('error', function(e) {
+        var errBox = document.getElementById('loader-error-box');
+        if (errBox) {
+          errBox.style.display = 'block';
+          errBox.innerText = 'Initialization Notice: ' + (e.message || 'Connecting to app bundle...');
+        }
+      });
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

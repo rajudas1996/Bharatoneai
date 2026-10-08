@@ -11,10 +11,12 @@ export const BharatLogo: React.FC<BharatLogoProps> = ({
   size = 'md',
   showSubtitle = false,
 }) => {
-  const iconHeight = size === 'sm' ? 24 : size === 'lg' ? 36 : 30;
+  const iconHeight = size === 'sm' ? 20 : size === 'lg' ? 36 : 30;
+  const textSize = size === 'sm' ? 'text-sm sm:text-base' : size === 'lg' ? 'text-2xl' : 'text-xl';
+  const gapSize = size === 'sm' ? 'gap-1.5' : 'gap-2.5';
 
   return (
-    <div className={`flex items-center gap-2.5 select-none ${className}`}>
+    <div className={`flex items-center ${gapSize} select-none shrink-0 ${className}`}>
       {/* Stylized Red Geometric 'A' Ribbon / Delta Icon from reference image */}
       <svg
         height={iconHeight}
@@ -64,7 +66,7 @@ export const BharatLogo: React.FC<BharatLogoProps> = ({
 
       {/* Bold Red "Bharat 1 AI" Typography */}
       <div className="flex flex-col leading-none">
-        <div className="flex items-center text-red-600 font-extrabold tracking-tight text-xl font-sans">
+        <div className={`flex items-center text-red-600 font-extrabold tracking-tight ${textSize} font-sans`}>
           <span>Bharat</span>
           <span className="text-red-700 ml-1">1</span>
           <span className="text-red-600 ml-1">AI</span>

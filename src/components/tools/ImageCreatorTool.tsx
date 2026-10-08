@@ -21,7 +21,8 @@ import {
   Share2,
   HelpCircle,
   Hash,
-  X
+  X,
+  Film
 } from 'lucide-react';
 import { generateAiImage } from '../../utils/aiClient';
 import { safeStorage } from '../../utils/safeStorage';
@@ -490,6 +491,14 @@ export const ImageCreatorTool: React.FC<ImageCreatorToolProps> = ({
     }
   };
 
+  const handleSendToAnimateStudio = () => {
+    if (!currentImage) return;
+    safeStorage.setItem('bharat1_active_editor_image', currentImage);
+    if (onNavigateTab) {
+      onNavigateTab('animate_image');
+    }
+  };
+
   const handleDeleteGalleryItem = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setGallery((prev) => prev.filter((item) => item.id !== id));
@@ -846,6 +855,15 @@ export const ImageCreatorTool: React.FC<ImageCreatorToolProps> = ({
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5" />
                     <span>Edit in Studio</span>
+                  </button>
+
+                  <button
+                    onClick={handleSendToAnimateStudio}
+                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    title="Animate this image to video"
+                  >
+                    <Film className="w-3.5 h-3.5" />
+                    <span>Animate Video</span>
                   </button>
 
                   <button

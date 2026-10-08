@@ -83,6 +83,7 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
   // Drag-and-drop reordering state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [insertionTarget, setInsertionTarget] = useState<number | null>(null); // Index where dragged item will be inserted
   const [fullWidthCharts, setFullWidthCharts] = useState<Set<string>>(new Set());
   const initialChartsRef = useRef<DynamicChartWidget[]>(charts);
 
@@ -103,12 +104,41 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
     }
   };
 
-  const handleDragEnter = (index: number) => {
-    setDragOverIndex(index);
+  const handleDragOverInsertionZone = (e: React.DragEvent, insertAtPos: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    if (insertionTarget !== insertAtPos) {
+      setInsertionTarget(insertAtPos);
+    }
   };
 
-  const handleDragLeave = () => {
-    // leave
+  const handleDropOnInsertionZone = (e: React.DragEvent, insertAtPos: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedIndex === null) return;
+
+    const fromIndex = draggedIndex;
+    if (fromIndex === insertAtPos || fromIndex === insertAtPos - 1) {
+      // No movement
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      setInsertionTarget(null);
+      return;
+    }
+
+    const updated = [...charts];
+    const [movedItem] = updated.splice(fromIndex, 1);
+    // If we dragged an item from before insertAtPos, removing it shifted remaining indices left by 1
+    const targetIdx = fromIndex < insertAtPos ? insertAtPos - 1 : insertAtPos;
+    updated.splice(targetIdx, 0, movedItem);
+
+    if (onReorderCharts) {
+      onReorderCharts(updated);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    setInsertionTarget(null);
   };
 
   const handleDrop = (e: React.DragEvent, targetIndex: number) => {
@@ -116,6 +146,7 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
     if (draggedIndex === null || draggedIndex === targetIndex) {
       setDraggedIndex(null);
       setDragOverIndex(null);
+      setInsertionTarget(null);
       return;
     }
 
@@ -128,18 +159,31 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
     }
     setDraggedIndex(null);
     setDragOverIndex(null);
+    setInsertionTarget(null);
   };
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
     setDragOverIndex(null);
+    setInsertionTarget(null);
   };
 
   const handleMove = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= charts.length) return;
+    if (toIndex < 0 || toIndex >= charts.length || fromIndex === toIndex) return;
     const updated = [...charts];
     const [movedItem] = updated.splice(fromIndex, 1);
     updated.splice(toIndex, 0, movedItem);
+    if (onReorderCharts) {
+      onReorderCharts(updated);
+    }
+  };
+
+  // Move directly to a specific 0-based sequence position
+  const handleMoveToPosition = (fromIndex: number, toPosition: number) => {
+    if (toPosition < 0 || toPosition >= charts.length || fromIndex === toPosition) return;
+    const updated = [...charts];
+    const [movedItem] = updated.splice(fromIndex, 1);
+    updated.splice(toPosition, 0, movedItem);
     if (onReorderCharts) {
       onReorderCharts(updated);
     }
@@ -205,34 +249,65 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
   return (
     <div className="space-y-4 mb-6">
       {/* Sequence & Alignment Layout Control Bar */}
-      <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
-            <Move className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
-              <span>Visualizations Sequence & Alignment</span>
-              <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-mono font-bold">
-                {charts.length} Visualizations
-              </span>
+      <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-2xs space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
+              <Move className="w-4 h-4" />
             </div>
-            <p className="text-[11px] text-slate-500">
-              Drag handle <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1 rounded">⠿</span> to change sequence order, or click <span className="font-semibold text-slate-700">← / →</span> arrows. Toggle <span className="font-semibold text-slate-700">Full Width / Half Width</span> to change alignment.
-            </p>
+            <div>
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                <span>Visualizations Sequence & Alignment</span>
+                <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-mono font-bold">
+                  {charts.length} Visualizations
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Drag <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1 rounded">⠿</span> handle or select position to change order. Drag between items to insert anywhere. Toggle <span className="font-semibold text-slate-700">Full Width / Half Width</span> for alignment.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleResetOrder}
+              className="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg text-xs font-semibold border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
+              title="Reset sequence order to default"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Sequence</span>
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleResetOrder}
-            className="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg text-xs font-semibold border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Reset sequence order to default"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Sequence</span>
-          </button>
+        {/* Visual Sequence Track Mini-Bar */}
+        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
+            Current Sequence:
+          </span>
+          {charts.map((c, i) => (
+            <div
+              key={c.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDrop={(e) => handleDrop(e, i)}
+              className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-grab active:cursor-grabbing ${
+                draggedIndex === i
+                  ? 'opacity-40 border-slate-300'
+                  : dragOverIndex === i
+                  ? 'border-red-500 bg-red-50 text-red-700 ring-2 ring-red-200'
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800'
+              }`}
+              title={`Drag to reorder position. Currently #${i + 1}`}
+            >
+              <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[9px] font-black flex items-center justify-center font-mono">
+                {i + 1}
+              </span>
+              <span className="truncate max-w-[130px]">{c.title}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -242,6 +317,30 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
         const isFullWidth = fullWidthCharts.has(widget.id);
         const isDragging = draggedIndex === index;
         const isDragOver = dragOverIndex === index && draggedIndex !== index;
+        
+        // Wrap with insertion zone before each item if dragging
+        const insertionZoneBefore = draggedIndex !== null && (
+          <div
+            key={`drop-zone-${index}`}
+            onDragOver={(e) => handleDragOverInsertionZone(e, index)}
+            onDrop={(e) => handleDropOnInsertionZone(e, index)}
+            className={`col-span-1 lg:col-span-2 transition-all duration-200 border-2 border-dashed rounded-xl py-2.5 px-4 text-center cursor-pointer ${
+              insertionTarget === index
+                ? 'border-red-500 bg-red-50 text-red-700 shadow-sm scale-[1.01]'
+                : 'border-slate-300 bg-slate-50/70 text-slate-500 hover:border-red-400 hover:text-red-600'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2 text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+              <span>
+                {index === 0
+                  ? '↓ Drop Here to Insert at Position #1 (First)'
+                  : `↓ Drop Here to Insert between #${index} and #${index + 1} (At Position #${index + 1})`}
+              </span>
+            </div>
+          </div>
+        );
+
         // If this widget is a map visualization, render DynamicGeoMap with drag & drop support!
         if (
           widget.chartType === 'auto_map' ||
@@ -249,40 +348,40 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
           widget.chartType === 'world_map'
         ) {
           return (
-            <div
-              key={widget.id}
-              draggable={true}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnter={() => handleDragEnter(index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
-              className={`transition-all duration-200 ${
-                isFullWidth ? 'lg:col-span-2 col-span-1' : 'col-span-1'
-              } ${isDragging ? 'opacity-40 scale-[0.98]' : ''} ${
-                isDragOver ? 'ring-2 ring-red-500 rounded-xl ring-offset-2' : ''
-              }`}
-            >
-              <DynamicGeoMap
-                widget={widget}
-                columns={columns}
-                filteredRows={filteredRows}
-                allRows={filteredRows}
-                filterState={filterState}
-                onSetCrossFilter={onSetCrossFilter}
-                onClearCrossFilter={onClearCrossFilter}
-                onUpdateChart={onUpdateChart}
-                onRemoveChart={onRemoveChart}
-                onOpenEditChart={onOpenEditChart}
-                sequenceNumber={index + 1}
-                totalCharts={charts.length}
-                onMoveLeft={() => handleMove(index, index - 1)}
-                onMoveRight={() => handleMove(index, index + 1)}
-                onToggleWidth={() => handleToggleWidth(widget.id)}
-                isFullWidth={isFullWidth}
-              />
-            </div>
+            <React.Fragment key={widget.id}>
+              {insertionZoneBefore}
+              <div
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`transition-all duration-200 ${
+                  isFullWidth ? 'lg:col-span-2 col-span-1' : 'col-span-1'
+                } ${isDragging ? 'opacity-40 scale-[0.98]' : ''} ${
+                  isDragOver ? 'ring-2 ring-red-500 rounded-xl ring-offset-2' : ''
+                }`}
+              >
+                <DynamicGeoMap
+                  widget={widget}
+                  columns={columns}
+                  filteredRows={filteredRows}
+                  allRows={filteredRows}
+                  filterState={filterState}
+                  onSetCrossFilter={onSetCrossFilter}
+                  onClearCrossFilter={onClearCrossFilter}
+                  onUpdateChart={onUpdateChart}
+                  onRemoveChart={onRemoveChart}
+                  onOpenEditChart={onOpenEditChart}
+                  sequenceNumber={index + 1}
+                  totalCharts={charts.length}
+                  onMoveLeft={() => handleMove(index, index - 1)}
+                  onMoveRight={() => handleMove(index, index + 1)}
+                  onToggleWidth={() => handleToggleWidth(widget.id)}
+                  isFullWidth={isFullWidth}
+                />
+              </div>
+            </React.Fragment>
           );
         }
 
@@ -299,78 +398,113 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
         const hBarDynamicHeight = Math.max(260, data.length * 28);
 
         return (
-          <div
-            key={widget.id}
-            draggable={true}
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragEnter={() => handleDragEnter(index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            className={`transition-all duration-200 ${
-              isFullWidth ? 'lg:col-span-2 col-span-1' : 'col-span-1'
-            } ${isDragging ? 'opacity-40 scale-[0.98]' : ''} ${
-              isDragOver ? 'ring-2 ring-red-500 rounded-xl ring-offset-2' : ''
-            }`}
-          >
+          <React.Fragment key={widget.id}>
+            {insertionZoneBefore}
             <div
-              className={`bg-white rounded-xl border p-4 shadow-2xs flex flex-col justify-between transition-all group ${
-                isCurrentlyCrossFilteredSource
-                  ? 'border-red-400 ring-2 ring-red-500/10'
-                  : 'border-slate-200/90 hover:border-slate-300'
+              draggable={true}
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`transition-all duration-200 ${
+                isFullWidth ? 'lg:col-span-2 col-span-1' : 'col-span-1'
+              } ${isDragging ? 'opacity-40 scale-[0.98]' : ''} ${
+                isDragOver ? 'ring-2 ring-red-500 rounded-xl ring-offset-2' : ''
               }`}
             >
-              {/* Sequence & Alignment Reorder Strip */}
-              <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100/90 text-xs select-none">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="cursor-grab active:cursor-grabbing p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors"
-                    title="Click and drag to reorder this visualization"
-                  >
-                    <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-red-600 transition-colors" />
-                    <span className="text-[11px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-full font-mono shadow-xs tracking-wider">
-                      #{index + 1}
+              <div
+                className={`bg-white rounded-xl border p-4 shadow-2xs flex flex-col justify-between transition-all group ${
+                  isCurrentlyCrossFilteredSource
+                    ? 'border-red-400 ring-2 ring-red-500/10'
+                    : 'border-slate-200/90 hover:border-slate-300'
+                }`}
+              >
+                {/* Sequence & Alignment Reorder Strip */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2.5 border-b border-slate-100/90 text-xs select-none">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="cursor-grab active:cursor-grabbing p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors"
+                      title="Click and drag to reorder this visualization"
+                    >
+                      <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-red-600 transition-colors" />
+                      <span className="text-[11px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-full font-mono shadow-xs tracking-wider">
+                        #{index + 1}
+                      </span>
+                    </div>
+
+                    {/* Quick Position Selector Dropdown */}
+                    <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 text-[11px]">
+                      <span className="text-slate-400 font-semibold">Pos:</span>
+                      <select
+                        value={index}
+                        onChange={(e) => handleMoveToPosition(index, Number(e.target.value))}
+                        className="bg-transparent text-slate-800 font-bold outline-none cursor-pointer"
+                        title="Jump to specific sequence position"
+                      >
+                        {charts.map((_, i) => (
+                          <option key={i} value={i}>
+                            #{i + 1} {i === 0 ? '(First)' : i === charts.length - 1 ? '(Last)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+                      of {charts.length}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
-                    Position {index + 1} of {charts.length}
-                  </span>
-                </div>
 
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handleMove(index, index - 1)}
-                    disabled={index === 0}
-                    className="p-1 rounded text-slate-400 hover:text-slate-800 disabled:opacity-20 hover:bg-slate-100 transition-colors cursor-pointer"
-                    title="Move Left / Earlier in sequence"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMove(index, index + 1)}
-                    disabled={index === charts.length - 1}
-                    className="p-1 rounded text-slate-400 hover:text-slate-800 disabled:opacity-20 hover:bg-slate-100 transition-colors cursor-pointer"
-                    title="Move Right / Later in sequence"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleWidth(widget.id)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ml-1 transition-all cursor-pointer ${
-                      isFullWidth
-                        ? 'bg-red-50 text-red-700 border-red-200 shadow-2xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                    }`}
-                    title="Toggle Full Width or Half Width alignment"
-                  >
-                    {isFullWidth ? 'Full Width' : 'Half Width'}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleMove(index, 0)}
+                      disabled={index === 0}
+                      className="px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-800 disabled:opacity-20 hover:bg-slate-100 transition-colors cursor-pointer text-[10px] font-bold"
+                      title="Move to First (#1)"
+                    >
+                      ⤒ First
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMove(index, index - 1)}
+                      disabled={index === 0}
+                      className="p-1 rounded text-slate-400 hover:text-slate-800 disabled:opacity-20 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Move Left / Earlier in sequence"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMove(index, index + 1)}
+                      disabled={index === charts.length - 1}
+                      className="p-1 rounded text-slate-400 hover:text-slate-800 disabled:opacity-20 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Move Right / Later in sequence"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMove(index, charts.length - 1)}
+                      disabled={index === charts.length - 1}
+                      className="px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-800 disabled:opacity-20 hover:bg-slate-100 transition-colors cursor-pointer text-[10px] font-bold"
+                      title="Move to Last"
+                    >
+                      ⤓ Last
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleWidth(widget.id)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border ml-1 transition-all cursor-pointer ${
+                        isFullWidth
+                          ? 'bg-red-50 text-red-700 border-red-200 shadow-2xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                      title="Toggle Full Width or Half Width alignment"
+                    >
+                      {isFullWidth ? 'Full Width (100%)' : 'Half Width (50%)'}
+                    </button>
+                  </div>
                 </div>
-              </div>
             {/* Card Header: Title, Category Count Selector, Quick Chart Switcher, Actions */}
             <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
               <div className="flex-1 min-w-0">
@@ -821,8 +955,27 @@ export const DynamicDashboardCharts: React.FC<DynamicDashboardChartsProps> = ({
             </div>
           </div>
         </div>
+      </React.Fragment>
       );
     })}
+
+      {/* End Insertion Drop Target Zone */}
+      {draggedIndex !== null && (
+        <div
+          onDragOver={(e) => handleDragOverInsertionZone(e, charts.length)}
+          onDrop={(e) => handleDropOnInsertionZone(e, charts.length)}
+          className={`col-span-1 lg:col-span-2 transition-all duration-200 border-2 border-dashed rounded-xl py-3 px-4 text-center cursor-pointer ${
+            insertionTarget === charts.length
+              ? 'border-red-500 bg-red-50 text-red-700 shadow-sm scale-[1.01]'
+              : 'border-slate-300 bg-slate-50/70 text-slate-500 hover:border-red-400 hover:text-red-600'
+          }`}
+        >
+          <div className="flex items-center justify-center gap-2 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+            <span>↓ Drop Here to Place at End (Position #{charts.length})</span>
+          </div>
+        </div>
+      )}
 
       {/* Add Another Visualization Card at the end */}
       <button

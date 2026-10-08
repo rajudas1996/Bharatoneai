@@ -14,7 +14,7 @@ import {
   DynamicKPIWidget,
   ColumnMeta
 } from './types/dashboard';
-import { exportFilteredToExcel, parseWorkbookSheet } from './utils/excelParser';
+import { exportFilteredToExcel, parseWorkbookSheet, syncVisualizationsToWorkbook, downloadUpdatedWorkbook } from './utils/excelParser';
 import { parseNumericValue } from './utils/numberFormat';
 import { generateAutoDashboardConfig } from './utils/dashboardBuilder';
 import { Sidebar, MainNavTab } from './components/Sidebar';
@@ -39,10 +39,10 @@ import { UpgradeModal } from './components/UpgradeModal';
 import { AuthProfileModal, UserProfile } from './components/AuthProfileModal';
 
 // AI Tool Workspaces
-import { ImageCreatorTool } from './components/tools/ImageCreatorTool';
-import { ImageEditorTool } from './components/tools/ImageEditorTool';
-import { AnimateImageTool } from './components/tools/AnimateImageTool';
-import { TextToVideoTool } from './components/tools/TextToVideoTool';
+import { CRMLayout } from './components/crm/CRMLayout';
+import { SalesCRMTool } from './components/tools/SalesCRMTool';
+import { UnifiedImageEditor } from './components/tools/UnifiedImageEditor';
+import { UnifiedVideoEditor } from './components/tools/UnifiedVideoEditor';
 import { MusicGeneratorTool } from './components/tools/MusicGeneratorTool';
 import { DatabaseAuthTool } from './components/tools/DatabaseAuthTool';
 import { MapsDataTool } from './components/tools/MapsDataTool';
@@ -51,10 +51,12 @@ import { safeStorage } from './utils/safeStorage';
 import { ProjectsView } from './components/tools/ProjectsView';
 import { SettingsView } from './components/tools/SettingsView';
 import { HelpSupportView } from './components/tools/HelpSupportView';
+import { Home, BarChart3, Sparkles, Film, Layers, Briefcase, Video } from 'lucide-react';
 
 export default function App() {
   // Navigation tab: 'home' is the default landing page matching reference image
   const [currentTab, setCurrentTab] = useState<MainNavTab>('home');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Shared active image for Image Editor Studio
   const [activeEditorImage, setActiveEditorImage] = useState<string | null>(() => {
@@ -97,15 +99,21 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
       const saved = safeStorage.getItem('bharat1_user_profile');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.isLoggedIn === 'boolean') {
+          return parsed;
+        }
+      }
     } catch {}
     return {
-      name: 'Raju Das',
-      email: 'rajudaszoology22@gmail.com',
-      phone: '+91 98765 43210',
-      plan: 'Gold',
-      role: 'Super Admin',
-      isLoggedIn: true,
+      name: '',
+      rollNumber: '',
+      email: '',
+      phone: '',
+      plan: 'Free',
+      role: 'User',
+      isLoggedIn: false,
     };
   });
 
@@ -113,6 +121,22 @@ export default function App() {
     setUserProfile(profile);
     safeStorage.setItem('bharat1_user_profile', JSON.stringify(profile));
   }, []);
+
+  // Automatically sync visualization modifications to active workbook in real time
+  React.useEffect(() => {
+    if (workbook && layoutConfig?.charts) {
+      syncVisualizationsToWorkbook(workbook, layoutConfig.charts, layoutConfig.kpis);
+    }
+  }, [workbook, layoutConfig]);
+
+  // Handle Download Updated Workbook with modifications reflected
+  const handleDownloadUpdatedWorkbook = useCallback(() => {
+    if (!workbook || !dataset) return;
+    if (layoutConfig?.charts) {
+      syncVisualizationsToWorkbook(workbook, layoutConfig.charts, layoutConfig.kpis);
+    }
+    downloadUpdatedWorkbook(workbook, dataset.fileName);
+  }, [workbook, dataset, layoutConfig]);
 
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -412,8 +436,13 @@ export default function App() {
 
   // Handle sidebar navigation clicks - direct workspace activation
   const handleSelectNavTab = useCallback((tab: MainNavTab) => {
+    if (tab === 'sales_crm' && !userProfile.isLoggedIn) {
+      setCurrentTab('sales_crm');
+      setIsProfileOpen(true);
+      return;
+    }
     setCurrentTab(tab);
-  }, []);
+  }, [userProfile.isLoggedIn]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50/70 text-slate-900 font-sans antialiased">
@@ -426,6 +455,8 @@ export default function App() {
         onOpenUpload={() => setIsUploadOpen(true)}
         onTriggerReset={handleTriggerReset}
         onSelectSheet={handleSelectSheet}
+        isOpenOnMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -435,11 +466,12 @@ export default function App() {
           onOpenHelp={() => setCurrentTab('help')}
           onOpenUpgrade={() => setIsUpgradeOpen(true)}
           onOpenProfile={() => setIsProfileOpen(true)}
+          onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
           userProfile={userProfile}
         />
 
         {/* Scrollable Viewport */}
-        <main className="flex-1 overflow-y-auto px-6 py-6 bg-slate-50/60">
+        <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 bg-slate-50/60 pb-20 md:pb-6">
           {/* 1. HOME VIEW */}
           {currentTab === 'home' && (
             <HomePage
@@ -470,6 +502,8 @@ export default function App() {
                     onSelectSheet={handleSelectSheet}
                     onTriggerReset={handleTriggerReset}
                     onOpenUpload={() => setIsUploadOpen(true)}
+                    onDownloadUpdatedWorkbook={handleDownloadUpdatedWorkbook}
+                    hasWorkbook={Boolean(workbook)}
                   />
 
                   {/* 2. Detected Headers Bar & Dynamic Builder Quick Triggers */}
@@ -570,50 +604,120 @@ export default function App() {
             </>
           )}
 
-          {/* 3. IMAGE CREATOR TOOL */}
-          {currentTab === 'image_create' && (
-            <ImageCreatorTool
-              onSendToEditor={handleSendImageToEditor}
-              onNavigateTab={(tab) => setCurrentTab(tab as MainNavTab)}
+          {/* 3. SALES CRM (Integrated per User Blueprint) */}
+          {currentTab === 'sales_crm' && (
+            <CRMLayout
+              isLoggedIn={userProfile.isLoggedIn}
+              currentUserProfile={userProfile}
+              onOpenLoginModal={() => setIsProfileOpen(true)}
             />
           )}
 
-          {/* 4. IMAGE EDIT TOOL */}
-          {currentTab === 'image_edit' && (
-            <ImageEditorTool
+          {/* 4. UNIFIED IMAGE EDITOR (Merged Image Creator & Image Edit per User Request) */}
+          {(currentTab === 'image_editor' || currentTab === 'image_create' || currentTab === 'image_edit') && (
+            <UnifiedImageEditor
               initialImage={activeEditorImage}
-              onNavigateToCreator={() => setCurrentTab('image_create')}
               onNavigateTab={(tab) => setCurrentTab(tab as MainNavTab)}
             />
           )}
 
-          {/* 5. ANIMATE IMAGE TO VIDEO */}
-          {currentTab === 'animate_image' && <AnimateImageTool />}
+          {/* 5. UNIFIED VIDEO EDITOR (Merged Animate Image & Text to Video per User Request) */}
+          {(currentTab === 'video_editor' || currentTab === 'animate_image' || currentTab === 'text_to_video') && (
+            <UnifiedVideoEditor
+              initialImage={activeEditorImage}
+              onNavigateTab={(tab) => setCurrentTab(tab as MainNavTab)}
+            />
+          )}
 
-          {/* 6. TEXT TO VIDEO */}
-          {currentTab === 'text_to_video' && <TextToVideoTool />}
-
-          {/* 7. MUSIC GENERATION */}
+          {/* 6. MUSIC GENERATION */}
           {currentTab === 'music_gen' && <MusicGeneratorTool />}
 
-          {/* 8. DATABASE & AUTH */}
-          {currentTab === 'database_auth' && <DatabaseAuthTool />}
-
-          {/* 9. MAPS DATA */}
+          {/* 7. MAPS DATA */}
           {currentTab === 'maps_data' && <MapsDataTool />}
 
-          {/* 10. ALL TOOLS VIEW */}
+          {/* 8. ALL TOOLS VIEW */}
           {currentTab === 'all_tools' && <AllToolsView onSelectTab={handleSelectNavTab} />}
 
-          {/* 11. PROJECTS */}
+          {/* 9. PROJECTS */}
           {currentTab === 'projects' && <ProjectsView onSelectTab={handleSelectNavTab} />}
 
-          {/* 12. SETTINGS */}
-          {currentTab === 'settings' && <SettingsView />}
+          {/* 10. SETTINGS & DATABASE VAULT (Database & Auth moved under Settings with admin password raju1234) */}
+          {(currentTab === 'settings' || currentTab === 'database_auth') && (
+            <SettingsView initialTab={currentTab === 'database_auth' ? 'database_auth' : 'database_auth'} />
+          )}
 
-          {/* 13. HELP & SUPPORT */}
+          {/* 11. HELP & SUPPORT */}
           {currentTab === 'help' && <HelpSupportView />}
         </main>
+
+        {/* Mobile Bottom Sticky Navigation Bar */}
+        <div className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 flex items-center justify-around z-30 md:hidden shadow-lg select-none">
+          <button
+            type="button"
+            onClick={() => handleSelectNavTab('home')}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              currentTab === 'home' ? 'text-red-600' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span>Home</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectNavTab('dashboard')}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              currentTab === 'dashboard' ? 'text-red-600' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Dashboard</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectNavTab('sales_crm')}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              currentTab === 'sales_crm' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            <span>CRM</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectNavTab('image_editor')}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              currentTab === 'image_editor' || currentTab === 'image_create' || currentTab === 'image_edit' ? 'text-purple-600' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Image</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectNavTab('video_editor')}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              currentTab === 'video_editor' || currentTab === 'animate_image' || currentTab === 'text_to_video' ? 'text-amber-600' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Video className="w-4 h-4" />
+            <span>Video</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectNavTab('all_tools')}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              currentTab === 'all_tools' ? 'text-red-600' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Tools</span>
+          </button>
+        </div>
       </div>
 
       {/* Upload / Replace Excel Modal */}

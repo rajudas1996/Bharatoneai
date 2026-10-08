@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileSpreadsheet, RotateCcw, ChevronDown, Upload, FileText } from 'lucide-react';
+import { FileSpreadsheet, RotateCcw, ChevronDown, Upload, FileText, Download, CheckCircle2 } from 'lucide-react';
 import { Dataset } from '../types/dashboard';
 
 interface DatasetStatusCardProps {
@@ -7,6 +7,8 @@ interface DatasetStatusCardProps {
   onSelectSheet?: (sheetName: string) => void;
   onTriggerReset?: () => void;
   onOpenUpload?: () => void;
+  onDownloadUpdatedWorkbook?: () => void;
+  hasWorkbook?: boolean;
 }
 
 export const DatasetStatusCard: React.FC<DatasetStatusCardProps> = ({
@@ -14,16 +16,26 @@ export const DatasetStatusCard: React.FC<DatasetStatusCardProps> = ({
   onSelectSheet,
   onTriggerReset,
   onOpenUpload,
+  onDownloadUpdatedWorkbook,
+  hasWorkbook = true,
 }) => {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 mb-4 select-none">
-      {/* Line 1: Active Excel Heading in bold */}
-      <div className="flex items-center gap-2 mb-2.5">
-        <FileSpreadsheet className="w-4 h-4 text-red-600" />
-        <h2 className="font-bold text-slate-900 text-sm tracking-tight">Active Excel</h2>
+      {/* Line 1: Active Excel Heading in bold + Workbook Sync Status */}
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <div className="flex items-center gap-2">
+          <FileSpreadsheet className="w-4 h-4 text-red-600" />
+          <h2 className="font-bold text-slate-900 text-sm tracking-tight">Active Excel</h2>
+        </div>
+        
+        {/* Real-time Workbook Sync Badge */}
+        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>Workbook Synced with Visualizations</span>
+        </div>
       </div>
 
-      {/* Line 2: file name, select sheet drop down, reupload the excel, reset in one line */}
+      {/* Line 2: file name, select sheet drop down, reupload the excel, download updated workbook, reset in one line */}
       <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
         {/* File Name */}
         <div 
@@ -51,6 +63,18 @@ export const DatasetStatusCard: React.FC<DatasetStatusCardProps> = ({
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         ) : null}
+
+        {/* Download / Export Updated Workbook with Modifications Reflected */}
+        {onDownloadUpdatedWorkbook && hasWorkbook && (
+          <button
+            onClick={onDownloadUpdatedWorkbook}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all active:scale-98 flex items-center gap-1.5 cursor-pointer"
+            title="Download workbook (.xlsx) containing all original data plus synchronized visualization modifications"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Updated Workbook (.xlsx)</span>
+          </button>
+        )}
 
         {/* Re-upload the Excel */}
         {onOpenUpload && (

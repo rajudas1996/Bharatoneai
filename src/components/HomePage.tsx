@@ -13,7 +13,11 @@ import {
   Play, 
   FileSpreadsheet, 
   Bot, 
-  SlidersHorizontal 
+  SlidersHorizontal,
+  Briefcase,
+  Folder,
+  Settings,
+  Lock
 } from 'lucide-react';
 import { Dataset } from '../types/dashboard';
 
@@ -124,23 +128,13 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* 3. Section: Explore AI Tools (8 Cards in 4x2 Grid) */}
       <div className="space-y-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center">
-              <Play className="w-2.5 h-2.5 fill-white" />
-            </div>
-            <h2 className="text-sm font-bold text-slate-900">
-              Explore AI Tools
-            </h2>
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center">
+            <Play className="w-2.5 h-2.5 fill-white" />
           </div>
-
-          <button
-            onClick={() => onOpenTool('all_tools')}
-            className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition-colors"
-          >
-            <span>View All</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          <h2 className="text-sm font-bold text-slate-900">
+            Explore AI Tools
+          </h2>
         </div>
 
         {/* 8 AI Tool Cards matching reference image */}
@@ -164,10 +158,29 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </button>
 
-          {/* 2. Image Create */}
+          {/* 2. Sales CRM (New Option) */}
           <button
             type="button"
-            onClick={() => onOpenTool('image_create')}
+            onClick={() => onOpenTool('sales_crm')}
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-blue-200 group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+              <Briefcase className="w-6 h-6 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-slate-900 truncate">
+                Sales CRM
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+                Pipeline deals & customer tracking
+              </p>
+            </div>
+          </button>
+
+          {/* 3. Image Editor (Merged Image Creator & Edit) */}
+          <button
+            type="button"
+            onClick={() => onOpenTool('image_editor')}
             className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-purple-200 group"
           >
             <div className="w-12 h-12 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
@@ -175,72 +188,34 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
             <div className="min-w-0">
               <h3 className="text-xs font-bold text-slate-900 truncate">
-                Image Create
+                Image Editor
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
-                Create stunning images from text
+                AI generation & studio canvas editing
               </p>
             </div>
           </button>
 
-          {/* 3. Image Edit */}
+          {/* 4. Video Editor (Merged Animate Image & Text to Video) */}
           <button
             type="button"
-            onClick={() => onOpenTool('image_edit')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-emerald-200 group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-              <SlidersHorizontal className="w-6 h-6 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-slate-900 truncate">
-                Image Edit
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
-                Edit, transform and enhance images
-              </p>
-            </div>
-          </button>
-
-          {/* 4. Animate Image to Video */}
-          <button
-            type="button"
-            onClick={() => onOpenTool('animate_image')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-orange-200 group"
+            onClick={() => onOpenTool('video_editor')}
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-amber-200 group"
           >
             <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-              <Film className="w-6 h-6 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-slate-900 truncate">
-                Animate Image to Video
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
-                Turn images into engaging videos
-              </p>
-            </div>
-          </button>
-
-          {/* 5. Text to Video */}
-          <button
-            type="button"
-            onClick={() => onOpenTool('text_to_video')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-blue-200 group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
               <Video className="w-6 h-6 text-white" />
             </div>
             <div className="min-w-0">
               <h3 className="text-xs font-bold text-slate-900 truncate">
-                Text to Video
+                Video Editor
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
-                Generate videos from simple text
+                Text-to-video & cinematic motion
               </p>
             </div>
           </button>
 
-          {/* 6. Music Generation */}
+          {/* 5. Music Generation */}
           <button
             type="button"
             onClick={() => onOpenTool('music_gen')}
@@ -259,26 +234,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </button>
 
-          {/* 7. Database & Auth */}
-          <button
-            type="button"
-            onClick={() => onOpenTool('database_auth')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-red-200 group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-              <Database className="w-6 h-6 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-slate-900 truncate">
-                Database & Auth
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
-                Build real apps with secure backend
-              </p>
-            </div>
-          </button>
-
-          {/* 8. Maps Data */}
+          {/* 6. Maps Data */}
           <button
             type="button"
             onClick={() => onOpenTool('maps_data')}
@@ -293,6 +249,45 @@ export const HomePage: React.FC<HomePageProps> = ({
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
                 Use Google Maps and location data
+              </p>
+            </div>
+          </button>
+
+          {/* 7. Projects */}
+          <button
+            type="button"
+            onClick={() => onOpenTool('projects')}
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-amber-200 group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+              <Folder className="w-6 h-6 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-slate-900 truncate">
+                Projects
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+                Manage saved files & assets
+              </p>
+            </div>
+          </button>
+
+          {/* 8. Settings & Database Vault */}
+          <button
+            type="button"
+            onClick={() => onOpenTool('settings')}
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-slate-300 group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+              <Settings className="w-6 h-6 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-slate-900 truncate flex items-center gap-1.5">
+                <span>Settings & DB</span>
+                <Lock className="w-3 h-3 text-red-500" />
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+                Database & Auth (Admin protected)
               </p>
             </div>
           </button>
