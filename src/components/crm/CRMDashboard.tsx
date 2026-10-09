@@ -34,9 +34,10 @@ export const CRMDashboard: React.FC<CRMDashboardProps> = ({
   onNavigateTab,
   onSelectLead,
 }) => {
-  const isAdmin = currentUser?.role === 'Super Admin' || currentUser?.role === 'CRM Manager';
+  const isAdmin = currentUser?.role === 'Super Admin' || currentUser?.role === 'Lead Manager' || (currentUser?.role as string) === 'CRM Manager';
+  const isRM = currentUser?.role === 'RM';
   const [dashboardMode, setDashboardMode] = useState<'admin' | 'rm'>(
-    isAdmin ? 'admin' : 'rm'
+    isRM ? 'rm' : 'admin'
   );
 
   // Filter leads based on mode

@@ -1,4 +1,4 @@
-export type CRMRoleType = 'Super Admin' | 'CRM Manager' | 'RM';
+export type CRMRoleType = 'Super Admin' | 'Lead Manager' | 'CRM Manager' | 'RM';
 
 export interface CRMUser {
   id: string;

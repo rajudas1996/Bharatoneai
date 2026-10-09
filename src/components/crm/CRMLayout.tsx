@@ -154,29 +154,6 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
           <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
             Please sign in to your account to access Sales CRM
           </h2>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Sales CRM contains enterprise leads, client policy accounts, tender assignments, and RM performance targets. Please authenticate using your credentials to continue.
-          </p>
-        </div>
-
-        {/* Demo Credentials Box */}
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs space-y-2.5 max-w-md mx-auto">
-          <div className="font-extrabold text-slate-800 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>Available Role-Based Credentials:</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="p-2 bg-white rounded-xl border border-slate-200">
-              <span className="font-bold text-slate-900 block">Super Admin:</span>
-              <span className="text-slate-500 font-mono">User: <strong>raju</strong></span><br />
-              <span className="text-slate-500 font-mono">Pass: <strong>raju1234</strong></span>
-            </div>
-            <div className="p-2 bg-white rounded-xl border border-slate-200">
-              <span className="font-bold text-slate-900 block">Sales RM (Rahul):</span>
-              <span className="text-slate-500 font-mono">User: <strong>rahul</strong></span><br />
-              <span className="text-slate-500 font-mono">Pass: <strong>rm1234</strong></span>
-            </div>
-          </div>
         </div>
 
         <div className="pt-2">
@@ -194,14 +171,15 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
 
   // 2. AUTHENTICATED STATE: Full CRM Navigation and Workspaces
   const isSuperAdmin = currentCrmUser?.role === 'Super Admin';
-  const isManager = currentCrmUser?.role === 'CRM Manager';
+  const isLeadManager = currentCrmUser?.role === 'Lead Manager' || (currentCrmUser?.role as string) === 'CRM Manager';
+  const isRM = currentCrmUser?.role === 'RM';
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 animate-in fade-in duration-200 select-none">
       {/* CRM Navigation Bar */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 shadow-2xs flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {/* 1. Dashboard */}
+          {/* 1. Dashboard (All roles) */}
           <button
             type="button"
             onClick={() => setActiveTab('dashboard')}
@@ -215,7 +193,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             <span>Dashboard</span>
           </button>
 
-          {/* 2. Manage Leads */}
+          {/* 2. Raw Leads (For RM per User Request, and Master Leads for Admin/Manager) */}
           <button
             type="button"
             onClick={() => setActiveTab('manage_leads')}
@@ -226,11 +204,11 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Manage Leads</span>
+            <span>{isRM ? 'Raw Leads' : 'Manage Leads'}</span>
           </button>
 
-          {/* 3. Assign Leads (Only for Admin / Manager or preview) */}
-          {(isSuperAdmin || isManager) && (
+          {/* 3. Assign Leads (Only for Admin & Lead Manager) */}
+          {(isSuperAdmin || isLeadManager) && (
             <button
               type="button"
               onClick={() => setActiveTab('assign_leads')}
@@ -245,7 +223,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             </button>
           )}
 
-          {/* 4. My Leads */}
+          {/* 4. My Leads (For RM and Admin/Manager) */}
           <button
             type="button"
             onClick={() => setActiveTab('my_leads')}
@@ -259,7 +237,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             <span>My Leads</span>
           </button>
 
-          {/* 5. All Accounts */}
+          {/* 5. Accounts (My Accounts for RM, All Accounts for Admin/Manager) */}
           <button
             type="button"
             onClick={() => setActiveTab('accounts')}
@@ -270,10 +248,10 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             }`}
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>All Accounts</span>
+            <span>{isRM ? 'My Accounts' : 'All Accounts'}</span>
           </button>
 
-          {/* 6. All Contacts */}
+          {/* 6. Contact Directory (Contact Directory for RM, All Contacts for Admin/Manager) */}
           <button
             type="button"
             onClick={() => setActiveTab('contacts')}
@@ -284,50 +262,56 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             }`}
           >
             <Phone className="w-3.5 h-3.5" />
-            <span>All Contacts</span>
+            <span>{isRM ? 'Contact Directory' : 'All Contacts'}</span>
           </button>
 
-          {/* 7. Sales Pipeline */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('pipeline')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'pipeline'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Kanban className="w-3.5 h-3.5" />
-            <span>Sales Pipeline</span>
-          </button>
+          {/* 7. Sales Pipeline (Admin & Lead Manager) */}
+          {(isSuperAdmin || isLeadManager) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('pipeline')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'pipeline'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              <span>Sales Pipeline</span>
+            </button>
+          )}
 
-          {/* 8. Follow-ups & Activities */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('activities')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'activities'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Follow-ups</span>
-          </button>
+          {/* 8. Follow-ups (Admin & Lead Manager) */}
+          {(isSuperAdmin || isLeadManager) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('activities')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'activities'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Follow-ups</span>
+            </button>
+          )}
 
-          {/* 9. Reports & Analytics */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('reports')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'reports'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Reports</span>
-          </button>
+          {/* 9. Reports & Analytics (Super Admin & Lead Manager) */}
+          {(isSuperAdmin || isLeadManager) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('reports')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'reports'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Reports</span>
+            </button>
+          )}
         </div>
 
         {/* User Role Badge in Top-Right */}
@@ -337,7 +321,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
               {currentCrmUser?.name || 'Authorized User'}
             </div>
             <div className="text-[10px] text-slate-400 font-mono">
-              {currentCrmUser?.role} • {currentCrmUser?.rmId || 'USR'}
+              {currentCrmUser?.role === 'CRM Manager' ? 'Lead Manager' : currentCrmUser?.role} • {currentCrmUser?.rmId || 'USR'}
             </div>
           </div>
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100 shrink-0" title="Active Session" />

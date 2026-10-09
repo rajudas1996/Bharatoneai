@@ -8,7 +8,9 @@ import {
   Plus, 
   X, 
   Check, 
-  MessageSquare
+  MessageSquare,
+  ArrowUpDown,
+  ExternalLink
 } from 'lucide-react';
 import { CRMContact, CRMAccount } from '../../types/crm.types';
 
@@ -24,6 +26,7 @@ export const AllContacts: React.FC<AllContactsProps> = ({
   onUpdateContacts,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'company' | 'name'>('company');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newContact, setNewContact] = useState<Partial<CRMContact>>({
     name: '',
@@ -35,12 +38,21 @@ export const AllContacts: React.FC<AllContactsProps> = ({
     isPrimary: true
   });
 
-  const filteredContacts = contacts.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone.includes(searchTerm)
-  );
+  const filteredContacts = contacts
+    .filter(c =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone.includes(searchTerm)
+    )
+    .sort((a, b) => {
+      if (sortBy === 'company') {
+        const compCompare = a.companyName.localeCompare(b.companyName);
+        if (compCompare !== 0) return compCompare;
+        return a.name.localeCompare(b.name);
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   const handleAddContact = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,8 +112,8 @@ export const AllContacts: React.FC<AllContactsProps> = ({
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs">
+      {/* Search Bar & Sort Control */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -111,6 +123,21 @@ export const AllContacts: React.FC<AllContactsProps> = ({
             placeholder="Search contact, company, designation..."
             className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
           />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+            <span>Sort by:</span>
+          </span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'company' | 'name')}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+          >
+            <option value="company">Company Name (A to Z Alphabetical)</option>
+            <option value="name">Contact Person Name (A to Z)</option>
+          </select>
         </div>
       </div>
 
@@ -152,14 +179,28 @@ export const AllContacts: React.FC<AllContactsProps> = ({
               <a
                 href={`tel:${c.phone}`}
                 className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                title="Call phone number"
               >
                 <Phone className="w-3.5 h-3.5" />
                 <span>Call</span>
               </a>
+
+              <a
+                href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                title="Send WhatsApp Message"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>WhatsApp</span>
+              </a>
+
               {c.email && (
                 <a
                   href={`mailto:${c.email}`}
                   className="flex-1 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                  title="Send Email"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   <span>Email</span>

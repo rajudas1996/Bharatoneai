@@ -14,7 +14,9 @@ import {
   Save, 
   X, 
   Building2,
-  DollarSign
+  DollarSign,
+  Undo2,
+  AlertTriangle
 } from 'lucide-react';
 import { CRMLead, CRMUser, LeadStatus } from '../../types/crm.types';
 import { formatINR, addCrmAuditLog } from '../../utils/crmStore';
@@ -49,6 +51,10 @@ export const MyLeads: React.FC<MyLeadsProps> = ({
   const [newStatus, setNewStatus] = useState<LeadStatus>('Contacted');
   const [newRemarks, setNewRemarks] = useState('');
   const [newNextFollowUp, setNewNextFollowUp] = useState('');
+
+  // Move back to raw leads state
+  const [leadToReturn, setLeadToReturn] = useState<CRMLead | null>(null);
+  const [returnReason, setReturnReason] = useState<string>('');
 
   const rms = users.filter(u => u.role === 'RM');
   const activeRm = rms.find(r => r.rmId === selectedRmId) || rms[0];
@@ -124,6 +130,37 @@ export const MyLeads: React.FC<MyLeadsProps> = ({
       `Updated notes & follow-up for ${updatingLead.companyName}`
     );
     setUpdatingLead(null);
+  };
+
+  // Confirm Move Back to Raw Leads (Unassign and return to lead pool)
+  const handleConfirmMoveBackToRawLeads = () => {
+    if (!leadToReturn) return;
+
+    const updated = leads.map(l => {
+      if (l.id === leadToReturn.id) {
+        return {
+          ...l,
+          assignedRMId: undefined,
+          assignedRMName: undefined,
+          status: 'New' as LeadStatus,
+          remarks: returnReason 
+            ? `Returned to Raw Leads: ${returnReason} (by ${currentUser?.name || 'RM'})` 
+            : `Returned to Raw Leads Pool (by ${currentUser?.name || 'RM'})`,
+          updatedAt: new Date().toISOString().split('T')[0]
+        };
+      }
+      return l;
+    });
+
+    onUpdateLeads(updated);
+    addCrmAuditLog(
+      currentUser?.name || 'RM',
+      'LEAD_RETURNED_TO_RAW',
+      'My Leads',
+      `Returned lead ${leadToReturn.companyName} (${leadToReturn.id}) back to Raw Leads pool`
+    );
+    setLeadToReturn(null);
+    setReturnReason('');
   };
 
   return (
@@ -312,6 +349,18 @@ export const MyLeads: React.FC<MyLeadsProps> = ({
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => {
+                      setLeadToReturn(l);
+                      setReturnReason('');
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-800 font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                    title="Release and move lead back to Raw Leads database"
+                  >
+                    <Undo2 className="w-3 h-3" />
+                    <span>Raw Leads</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
                       setUpdatingLead(l);
                       setNewStatus(l.status);
                       setNewRemarks(l.remarks || '');
@@ -401,6 +450,55 @@ export const MyLeads: React.FC<MyLeadsProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* MOVE BACK TO RAW LEADS CONFIRMATION MODAL */}
+      {leadToReturn && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-extrabold text-slate-900">
+                Move Back to Raw Leads?
+              </h3>
+              <p className="text-xs text-slate-500">
+                Are you sure you want to release <strong>{leadToReturn.companyName}</strong> ({leadToReturn.id})? It will be unassigned from your portfolio and moved back to the Master Raw Leads pool for re-allocation.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Reason for Return / Handover Notes (Optional):
+              </label>
+              <textarea
+                rows={2}
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                placeholder="e.g. Territory mismatch, client requested another branch RM, or policy not feasible..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLeadToReturn(null)}
+                className="flex-1 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                Keep in My Leads
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmMoveBackToRawLeads}
+                className="flex-1 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                Yes, Return to Raw Leads
+              </button>
+            </div>
           </div>
         </div>
       )}

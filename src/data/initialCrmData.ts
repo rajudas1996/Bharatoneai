@@ -32,7 +32,7 @@ export const INITIAL_CRM_USERS: CRMUser[] = [
     email: 'vikram.m@bharatai.in',
     password: 'mgr',
     phone: '+91 98202 33445',
-    role: 'CRM Manager',
+    role: 'Lead Manager',
     isActive: true,
     department: 'Commercial Sales',
     createdAt: '2026-02-01'
