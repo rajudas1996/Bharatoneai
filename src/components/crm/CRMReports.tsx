@@ -16,10 +16,20 @@ import { formatINR, exportLeadsToExcel } from '../../utils/crmStore';
 interface CRMReportsProps {
   leads: CRMLead[];
   users: CRMUser[];
+  currentUser?: CRMUser | null;
 }
 
-export const CRMReports: React.FC<CRMReportsProps> = ({ leads, users }) => {
+export const CRMReports: React.FC<CRMReportsProps> = ({ leads, users, currentUser }) => {
+  const isRM = currentUser?.role === 'RM';
   const rms = users.filter(u => u.role === 'RM');
+
+  // Specific RM if logged in as RM
+  const myRmPerf = currentUser ? {
+    leads: leads.filter(l => l.assignedRMId === currentUser.rmId || l.assignedRMName === currentUser.name),
+    won: leads.filter(l => (l.assignedRMId === currentUser.rmId || l.assignedRMName === currentUser.name) && l.status === 'Won'),
+  } : null;
+  const myWonPremium = myRmPerf ? myRmPerf.won.reduce((s, l) => s + (l.expectedPremium || 0), 0) : 0;
+  const myPipeline = myRmPerf ? myRmPerf.leads.filter(l => l.status !== 'Won' && l.status !== 'Lost').reduce((s, l) => s + (l.expectedPremium || 0), 0) : 0;
 
   // RM Performance Calculations
   const rmPerformance = rms.map(rm => {
@@ -88,6 +98,38 @@ export const CRMReports: React.FC<CRMReportsProps> = ({ leads, users }) => {
           <span>Export Full Analytics (.xlsx)</span>
         </button>
       </div>
+
+      {/* RM Personal Performance Card (If logged in as RM) */}
+      {isRM && myRmPerf && (
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-5 text-white shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">
+              👤 Personal RM Achievement: {currentUser?.name || 'Relationship Manager'} ({currentUser?.rmId || 'RM-101'})
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              Active Portfolio
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white/10 p-3 rounded-xl backdrop-blur-xs">
+              <div className="text-[11px] text-slate-300">Allocated Raw Leads</div>
+              <div className="text-lg font-black text-white">{myRmPerf.leads.length}</div>
+            </div>
+            <div className="bg-white/10 p-3 rounded-xl backdrop-blur-xs">
+              <div className="text-[11px] text-slate-300">Closed Won Policies</div>
+              <div className="text-lg font-black text-emerald-400">{myRmPerf.won.length}</div>
+            </div>
+            <div className="bg-white/10 p-3 rounded-xl backdrop-blur-xs">
+              <div className="text-[11px] text-slate-300">Earned Won Premium</div>
+              <div className="text-lg font-black text-emerald-400">{formatINR(myWonPremium)}</div>
+            </div>
+            <div className="bg-white/10 p-3 rounded-xl backdrop-blur-xs">
+              <div className="text-[11px] text-slate-300">Active Pipeline Value</div>
+              <div className="text-lg font-black text-amber-400">{formatINR(myPipeline)}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* RM Scorecard Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">

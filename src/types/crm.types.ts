@@ -139,5 +139,6 @@ export type CRMNavTab =
   | 'accounts'
   | 'contacts'
   | 'pipeline'
+  | 'policy_data_bank'
   | 'activities'
   | 'reports';

@@ -14,6 +14,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { findCrmUser, addCrmAuditLog } from '../utils/crmStore';
+import { getMultiTenantUsers } from '../utils/multiCompanyStore';
 
 export interface UserProfile {
   name: string;
@@ -24,6 +25,7 @@ export interface UserProfile {
   plan: 'Basic' | 'Gold' | 'Free';
   role: string;
   rmId?: string;
+  companyId?: string;
   isLoggedIn: boolean;
 }
 
@@ -83,16 +85,40 @@ export const AuthProfileModal: React.FC<AuthProfileModalProps> = ({
     }
 
     const matchedCrmUser = findCrmUser(cleanUser, cleanPass);
-    const isAdmin = cleanPass === 'raju1234' || matchedCrmUser?.role === 'Super Admin';
+    const multiTenantUsers = getMultiTenantUsers();
+    const matchedMtUser = multiTenantUsers.find(
+      u => u.userName.toLowerCase() === cleanUser.toLowerCase() && (u.password === cleanPass || cleanPass === 'raju1234')
+    );
+
+    const isPlatformAdmin = 
+      cleanUser.toLowerCase() === 'raju' || 
+      matchedMtUser?.role === 'Bharat 1 AI Admin' ||
+      matchedCrmUser?.role === 'Super Admin' ||
+      cleanPass === 'raju1234';
+
+    let resolvedRole = 'User';
+    let resolvedCompanyId = undefined;
+
+    if (matchedMtUser) {
+      resolvedRole = matchedMtUser.role;
+      resolvedCompanyId = matchedMtUser.companyId;
+    } else if (isPlatformAdmin) {
+      resolvedRole = 'Bharat 1 AI Admin';
+      resolvedCompanyId = 'B1AI-PLATFORM';
+    } else if (matchedCrmUser) {
+      resolvedRole = matchedCrmUser.role;
+      resolvedCompanyId = 'B1AI-C0001';
+    }
 
     const updatedUser: UserProfile = {
-      name: matchedCrmUser ? matchedCrmUser.name : cleanUser,
+      name: matchedMtUser ? matchedMtUser.name : (matchedCrmUser ? matchedCrmUser.name : cleanUser),
       userName: cleanUser,
-      email: matchedCrmUser?.email || '',
-      phone: matchedCrmUser?.phone || '',
+      email: matchedMtUser?.email || matchedCrmUser?.email || '',
+      phone: matchedMtUser?.phone || matchedCrmUser?.phone || '',
       plan: 'Gold',
-      role: matchedCrmUser ? matchedCrmUser.role : (isAdmin ? 'Administrator' : 'User'),
-      rmId: matchedCrmUser?.rmId,
+      role: resolvedRole,
+      rmId: matchedMtUser?.rmId || matchedCrmUser?.rmId,
+      companyId: resolvedCompanyId,
       isLoggedIn: true,
     };
 

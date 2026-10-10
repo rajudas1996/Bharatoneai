@@ -48,6 +48,7 @@ import { AllContacts } from './AllContacts';
 import { PipelineBoard } from './PipelineBoard';
 import { FollowUps } from './FollowUps';
 import { CRMReports } from './CRMReports';
+import { PolicyDataBank } from './PolicyDataBank';
 
 interface CRMLayoutProps {
   isLoggedIn?: boolean;
@@ -115,6 +116,12 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
       setCurrentCrmUser(null);
     }
   }, [isLoggedIn, currentUserProfile]);
+
+  useEffect(() => {
+    if (currentCrmUser?.role === 'RM' && (activeTab === 'assign_leads')) {
+      setActiveTab('dashboard');
+    }
+  }, [currentCrmUser, activeTab]);
 
   // Handlers to synchronize and persist data
   const handleUpdateLeads = (newLeads: CRMLead[]) => {
@@ -193,21 +200,36 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             <span>Dashboard</span>
           </button>
 
-          {/* 2. Raw Leads (For RM per User Request, and Master Leads for Admin/Manager) */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('manage_leads')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'manage_leads'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>{isRM ? 'Raw Leads' : 'Manage Leads'}</span>
-          </button>
+          {/* 2. My Lead (for RM) / Manage Leads (for Admin & Lead Manager) */}
+          {isRM ? (
+            <button
+              type="button"
+              onClick={() => setActiveTab('my_leads')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'my_leads'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>My Lead</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setActiveTab('manage_leads')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'manage_leads'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Manage Leads</span>
+            </button>
+          )}
 
-          {/* 3. Assign Leads (Only for Admin & Lead Manager) */}
+          {/* 3. Assign Leads (Only for Super Admin & Lead Manager) */}
           {(isSuperAdmin || isLeadManager) && (
             <button
               type="button"
@@ -223,21 +245,23 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             </button>
           )}
 
-          {/* 4. My Leads (For RM and Admin/Manager) */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('my_leads')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'my_leads'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Briefcase className="w-3.5 h-3.5" />
-            <span>My Leads</span>
-          </button>
+          {/* 4. My Leads (For Super Admin & Lead Manager) */}
+          {(isSuperAdmin || isLeadManager) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('my_leads')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'my_leads'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>My Leads</span>
+            </button>
+          )}
 
-          {/* 5. Accounts (My Accounts for RM, All Accounts for Admin/Manager) */}
+          {/* All Accounts (for RM: All Accounts, for Admin/Manager: All Accounts) */}
           <button
             type="button"
             onClick={() => setActiveTab('accounts')}
@@ -248,10 +272,10 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             }`}
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>{isRM ? 'My Accounts' : 'All Accounts'}</span>
+            <span>All Accounts</span>
           </button>
 
-          {/* 6. Contact Directory (Contact Directory for RM, All Contacts for Admin/Manager) */}
+          {/* Contact Directory */}
           <button
             type="button"
             onClick={() => setActiveTab('contacts')}
@@ -262,57 +286,66 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
             }`}
           >
             <Phone className="w-3.5 h-3.5" />
-            <span>{isRM ? 'Contact Directory' : 'All Contacts'}</span>
+            <span>Contact Directory</span>
           </button>
 
-          {/* 7. Sales Pipeline (Admin & Lead Manager) */}
-          {(isSuperAdmin || isLeadManager) && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('pipeline')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'pipeline'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Kanban className="w-3.5 h-3.5" />
-              <span>Sales Pipeline</span>
-            </button>
-          )}
+          {/* Active Pipeline (RM: Active Pipeline, Admin: Sales Pipeline) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('pipeline')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'pipeline'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Kanban className="w-3.5 h-3.5" />
+            <span>{isRM ? 'Active Pipeline' : 'Sales Pipeline'}</span>
+          </button>
 
-          {/* 8. Follow-ups (Admin & Lead Manager) */}
-          {(isSuperAdmin || isLeadManager) && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('activities')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'activities'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Follow-ups</span>
-            </button>
-          )}
+          {/* Policy Data Bank */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('policy_data_bank')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'policy_data_bank'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Policy Data Bank</span>
+          </button>
 
-          {/* 9. Reports & Analytics (Super Admin & Lead Manager) */}
-          {(isSuperAdmin || isLeadManager) && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('reports')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'reports'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Reports</span>
-            </button>
-          )}
+          {/* Task (RM: Task, Admin/Manager: Task & Follow-up) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('activities')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'activities'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>{isRM ? 'Task' : 'Task & Follow-up'}</span>
+          </button>
+
+          {/* Report (RM: Report, Admin/Manager: Reports) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('reports')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'reports'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>{isRM ? 'Report' : 'Reports'}</span>
+          </button>
         </div>
+
 
         {/* User Role Badge in Top-Right */}
         <div className="flex items-center gap-2 shrink-0 pl-2 border-l border-slate-100">
@@ -333,6 +366,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
         <CRMDashboard
           leads={leads}
           accounts={accounts}
+          contacts={contacts}
           activities={activities}
           currentUser={currentCrmUser}
           onNavigateTab={(tab) => setActiveTab(tab)}
@@ -375,6 +409,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
           accounts={accounts}
           contacts={contacts}
           leads={leads}
+          currentUser={currentCrmUser}
           onUpdateAccounts={handleUpdateAccounts}
         />
       )}
@@ -383,6 +418,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
         <AllContacts
           contacts={contacts}
           accounts={accounts}
+          currentUser={currentCrmUser}
           onUpdateContacts={handleUpdateContacts}
         />
       )}
@@ -390,7 +426,16 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
       {activeTab === 'pipeline' && (
         <PipelineBoard
           leads={leads}
+          currentUser={currentCrmUser}
           onUpdateLeads={handleUpdateLeads}
+        />
+      )}
+
+      {activeTab === 'policy_data_bank' && (
+        <PolicyDataBank
+          leads={leads}
+          accounts={accounts}
+          currentUser={currentCrmUser}
         />
       )}
 
@@ -398,6 +443,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
         <FollowUps
           activities={activities}
           leads={leads}
+          currentUser={currentCrmUser}
           onUpdateActivities={handleUpdateActivities}
         />
       )}
@@ -406,6 +452,7 @@ export const CRMLayout: React.FC<CRMLayoutProps> = ({
         <CRMReports
           leads={leads}
           users={users}
+          currentUser={currentCrmUser}
         />
       )}
     </div>

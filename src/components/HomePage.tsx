@@ -126,7 +126,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </div>
 
-      {/* 3. Section: Explore AI Tools (8 Cards in 4x2 Grid) */}
+      {/* 3. Section: Explore AI Tools (Exactly 6 Cards in 3x2 Grid per Section 1) */}
       <div className="space-y-3.5">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center">
@@ -137,13 +137,13 @@ export const HomePage: React.FC<HomePageProps> = ({
           </h2>
         </div>
 
-        {/* 8 AI Tool Cards matching reference image */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* 1. Live Dashboard */}
+        {/* Exactly 6 AI Tool Cards in 2 Rows (3 Cards per row on desktop) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Row 1, Card 1: Live Dashboard */}
           <button
             type="button"
             onClick={onNavigateToDashboard}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-red-200 group"
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4.5 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-red-200 group cursor-pointer"
           >
             <div className="w-12 h-12 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
               <BarChart3 className="w-6 h-6 text-white" />
@@ -158,11 +158,11 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </button>
 
-          {/* 2. Sales CRM (New Option) */}
+          {/* Row 1, Card 2: Sales CRM */}
           <button
             type="button"
             onClick={() => onOpenTool('sales_crm')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-blue-200 group"
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4.5 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-blue-200 group cursor-pointer"
           >
             <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
               <Briefcase className="w-6 h-6 text-white" />
@@ -177,11 +177,11 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </button>
 
-          {/* 3. Image Editor (Merged Image Creator & Edit) */}
+          {/* Row 1, Card 3: Image Editor */}
           <button
             type="button"
             onClick={() => onOpenTool('image_editor')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-purple-200 group"
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4.5 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-purple-200 group cursor-pointer"
           >
             <div className="w-12 h-12 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
               <ImageIcon className="w-6 h-6 text-white" />
@@ -196,11 +196,11 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </button>
 
-          {/* 4. Video Editor (Merged Animate Image & Text to Video) */}
+          {/* Row 2, Card 1: Video Editor */}
           <button
             type="button"
             onClick={() => onOpenTool('video_editor')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-amber-200 group"
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4.5 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-amber-200 group cursor-pointer"
           >
             <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
               <Video className="w-6 h-6 text-white" />
@@ -215,11 +215,11 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </button>
 
-          {/* 5. Music Generation */}
+          {/* Row 2, Card 2: Music Generation */}
           <button
             type="button"
             onClick={() => onOpenTool('music_gen')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-purple-200 group"
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4.5 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-purple-200 group cursor-pointer"
           >
             <div className="w-12 h-12 rounded-xl bg-purple-500 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
               <Music className="w-6 h-6 text-white" />
@@ -234,11 +234,11 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </button>
 
-          {/* 6. Maps Data */}
+          {/* Row 2, Card 3: Maps Data */}
           <button
             type="button"
             onClick={() => onOpenTool('maps_data')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-emerald-200 group"
+            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4.5 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-emerald-200 group cursor-pointer"
           >
             <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
               <MapPin className="w-6 h-6 text-white" />
@@ -249,45 +249,6 @@ export const HomePage: React.FC<HomePageProps> = ({
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
                 Use Google Maps and location data
-              </p>
-            </div>
-          </button>
-
-          {/* 7. Projects */}
-          <button
-            type="button"
-            onClick={() => onOpenTool('projects')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-amber-200 group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-              <Folder className="w-6 h-6 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-slate-900 truncate">
-                Projects
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
-                Manage saved files & assets
-              </p>
-            </div>
-          </button>
-
-          {/* 8. Settings & Database Vault */}
-          <button
-            type="button"
-            onClick={() => onOpenTool('settings')}
-            className="bg-white hover:bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 text-left transition-all hover:shadow-xs hover:border-slate-300 group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-              <Settings className="w-6 h-6 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-slate-900 truncate flex items-center gap-1.5">
-                <span>Settings & DB</span>
-                <Lock className="w-3 h-3 text-red-500" />
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
-                Database & Auth (Admin protected)
               </p>
             </div>
           </button>

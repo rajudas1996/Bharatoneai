@@ -11,11 +11,12 @@ import {
   ChevronLeft,
   DollarSign
 } from 'lucide-react';
-import { CRMLead, LeadStatus } from '../../types/crm.types';
+import { CRMLead, LeadStatus, CRMUser } from '../../types/crm.types';
 import { formatINR, addCrmAuditLog } from '../../utils/crmStore';
 
 interface PipelineBoardProps {
   leads: CRMLead[];
+  currentUser?: CRMUser | null;
   onUpdateLeads: (leads: CRMLead[]) => void;
 }
 
@@ -30,8 +31,16 @@ const STAGES: { id: LeadStatus; label: string; color: string; badge: string }[] 
 
 export const PipelineBoard: React.FC<PipelineBoardProps> = ({
   leads,
+  currentUser,
   onUpdateLeads,
 }) => {
+  const isRM = currentUser?.role === 'RM';
+  const [pipelineScope, setPipelineScope] = useState<'mine' | 'all'>(isRM ? 'mine' : 'all');
+
+  const visibleLeads = pipelineScope === 'mine' && currentUser
+    ? leads.filter(l => l.assignedRMId === currentUser.rmId || l.assignedRMName === currentUser.name)
+    : leads;
+
   const moveLeadToStage = (leadId: string, newStage: LeadStatus) => {
     const updated = leads.map(l => {
       if (l.id === leadId) {
@@ -59,25 +68,52 @@ export const PipelineBoard: React.FC<PipelineBoardProps> = ({
         <div>
           <h2 className="text-base md:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
             <Kanban className="w-5 h-5 text-blue-600" />
-            <span>Interactive Sales Pipeline Kanban</span>
+            <span>{isRM ? 'Active Pipeline Board' : 'Interactive Sales Pipeline Kanban'}</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Drag and track deal progressions through corporate underwriting, proposal submission, and policy closure
+            {isRM
+              ? `Real-time active deals, quotes, and opportunity stages for ${currentUser?.name || 'Relationship Manager'}`
+              : 'Drag and track deal progressions through corporate underwriting, proposal submission, and policy closure'}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-          <span>Total Pipeline Value:</span>
-          <span className="font-extrabold text-blue-900 font-mono text-sm">
-            {formatINR(leads.reduce((s, l) => s + (l.expectedPremium || 0), 0))}
-          </span>
+        <div className="flex flex-wrap items-center gap-3">
+          {isRM && (
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setPipelineScope('mine')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  pipelineScope === 'mine' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                My Deals ({leads.filter(l => l.assignedRMId === currentUser?.rmId || l.assignedRMName === currentUser?.name).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPipelineScope('all')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  pipelineScope === 'all' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Team ({leads.length})
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
+            <span>Pipeline Value:</span>
+            <span className="font-extrabold text-blue-900 font-mono text-sm">
+              {formatINR(visibleLeads.reduce((s, l) => s + (l.expectedPremium || 0), 0))}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Kanban Stages Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 items-start">
         {STAGES.map((stage, stageIdx) => {
-          const stageLeads = leads.filter(l => l.status === stage.id);
+          const stageLeads = visibleLeads.filter(l => l.status === stage.id);
           const stageValue = stageLeads.reduce((s, l) => s + (l.expectedPremium || 0), 0);
 
           return (

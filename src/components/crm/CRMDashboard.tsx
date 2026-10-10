@@ -14,12 +14,13 @@ import {
   Calendar,
   Layers
 } from 'lucide-react';
-import { CRMLead, CRMUser, CRMAccount, CRMActivity } from '../../types/crm.types';
+import { CRMLead, CRMUser, CRMAccount, CRMActivity, CRMContact } from '../../types/crm.types';
 import { formatINR } from '../../utils/crmStore';
 
 interface CRMDashboardProps {
   leads: CRMLead[];
   accounts: CRMAccount[];
+  contacts?: CRMContact[];
   activities: CRMActivity[];
   currentUser: CRMUser | null;
   onNavigateTab: (tab: any) => void;
@@ -29,6 +30,7 @@ interface CRMDashboardProps {
 export const CRMDashboard: React.FC<CRMDashboardProps> = ({
   leads,
   accounts,
+  contacts = [],
   activities,
   currentUser,
   onNavigateTab,
@@ -48,12 +50,25 @@ export const CRMDashboard: React.FC<CRMDashboardProps> = ({
 
   // Key Metrics
   const totalLeads = displayLeads.length;
+  const rawLeadsCount = displayLeads.filter(l => l.status === 'New' || l.status === 'Contacted').length;
   const wonLeads = displayLeads.filter(l => l.status === 'Won');
   const wonValue = wonLeads.reduce((sum, l) => sum + (l.expectedPremium || 0), 0);
   const pipelineLeads = displayLeads.filter(l => l.status !== 'Won' && l.status !== 'Lost');
   const pipelineValue = pipelineLeads.reduce((sum, l) => sum + (l.expectedPremium || 0), 0);
   const conversionRate = totalLeads > 0 ? ((wonLeads.length / totalLeads) * 100).toFixed(1) : '0';
-  const pendingActivities = activities.filter(a => a.status === 'Pending').length;
+  
+  // Pending Activities (filtered for RM if RM mode)
+  const displayActivities = dashboardMode === 'rm'
+    ? activities.filter(a => a.assignedTo === currentUser?.name || a.assignedTo === 'Rahul Sharma')
+    : activities;
+  const pendingActivities = displayActivities.filter(a => a.status === 'Pending').length;
+
+  // Accounts (Meeting completed clients)
+  const rmAccountNames = new Set(displayLeads.map(l => l.companyName.toLowerCase()));
+  const displayAccounts = dashboardMode === 'rm'
+    ? accounts.filter(a => rmAccountNames.has(a.companyName.toLowerCase()))
+    : accounts;
+  const accountsCount = dashboardMode === 'rm' && displayAccounts.length > 0 ? displayAccounts.length : accounts.length;
 
   // LOB Breakdown
   const lobDistribution: { [key: string]: { count: number; value: number } } = {};
@@ -124,91 +139,133 @@ export const CRMDashboard: React.FC<CRMDashboardProps> = ({
         )}
       </div>
 
-      {/* 6 High-Impact KPI Cards */}
+      {/* 6 High-Impact Interactive KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        {/* 1. Total Leads */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+        {/* 1. Total Leads / Raw Leads */}
+        <button
+          type="button"
+          onClick={() => onNavigateTab('manage_leads')}
+          className="text-left bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:border-blue-400 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer group"
+          title="Click to view Raw Leads & Master Database"
+        >
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Total Leads</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider group-hover:text-blue-600 transition-colors">
+              {isRM ? 'Raw Leads' : 'Total Leads'}
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl font-black text-slate-900">{totalLeads}</div>
-          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium">
-            <span className="text-blue-600 font-bold">100%</span> in system
+          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium truncate">
+            <span className="text-blue-600 font-bold">{rawLeadsCount} Raw</span> • {contacts.length} Contacts
           </div>
-        </div>
+        </button>
 
         {/* 2. Active Pipeline Value */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => onNavigateTab('pipeline')}
+          className="text-left bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer group"
+          title="Click to view Active Pipeline Kanban Board"
+        >
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Active Pipeline</span>
-            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider group-hover:text-amber-600 transition-colors">
+              Active Pipeline
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl font-black text-slate-900">{formatINR(pipelineValue)}</div>
-          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium">
-            <span className="text-amber-600 font-bold">{pipelineLeads.length}</span> open deals
+          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium truncate">
+            <span className="text-amber-600 font-bold">{pipelineLeads.length}</span> active quotes
           </div>
-        </div>
+        </button>
 
         {/* 3. Won Realized Value */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => onNavigateTab('reports')}
+          className="text-left bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:border-emerald-400 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer group"
+          title="Click to view Closed Won Reports"
+        >
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Won Premium</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider group-hover:text-emerald-600 transition-colors">
+              Won Premium
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl font-black text-emerald-600">{formatINR(wonValue)}</div>
-          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium">
-            <span className="text-emerald-600 font-bold">{wonLeads.length}</span> policies issued
+          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium truncate">
+            <span className="text-emerald-600 font-bold">{wonLeads.length}</span> closed policies
           </div>
-        </div>
+        </button>
 
         {/* 4. Conversion Rate */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => onNavigateTab('reports')}
+          className="text-left bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:border-purple-400 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer group"
+          title="Click to view Conversion Analytics"
+        >
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Conversion %</span>
-            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider group-hover:text-purple-600 transition-colors">
+              Conversion %
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl font-black text-purple-700">{conversionRate}%</div>
-          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium">
+          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium truncate">
             Lead to Win ratio
           </div>
-        </div>
+        </button>
 
-        {/* 5. Accounts Managed */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+        {/* 5. Accounts Managed (Meetings Done) */}
+        <button
+          type="button"
+          onClick={() => onNavigateTab('accounts')}
+          className="text-left bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:border-slate-500 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer group"
+          title="Click to view Accounts (Physical Client Meetings Done)"
+        >
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Accounts</span>
-            <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider group-hover:text-slate-900 transition-colors">
+              {isRM ? 'My Accounts' : 'Total Accounts'}
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-colors">
               <Building2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl font-black text-slate-900">{accounts.length}</div>
-          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium">
-            Corporate clients
+          <div className="text-xl font-black text-slate-900">{accountsCount}</div>
+          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium truncate">
+            <span className="text-emerald-600 font-bold">Meetings Done</span>
           </div>
-        </div>
+        </button>
 
         {/* 6. Pending Follow-ups */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => onNavigateTab('activities')}
+          className="text-left bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:border-red-400 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer group"
+          title="Click to view & execute Pending Tasks & Follow-ups"
+        >
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Pending Tasks</span>
-            <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider group-hover:text-red-600 transition-colors">
+              Pending Tasks
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-colors">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl font-black text-red-600">{pendingActivities}</div>
-          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium">
-            Calls & Meetings
+          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium truncate">
+            <span className="text-red-600 font-bold">Action Required</span> • View
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Two Column Grid: Pipeline Distribution & LOB Breakdown */}

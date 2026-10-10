@@ -43,6 +43,8 @@ export const ManageLeads: React.FC<ManageLeadsProps> = ({
   onUpdateLeads,
   onNavigateToAssign,
 }) => {
+  const isRM = currentUser?.role === 'RM';
+
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [filterState, setFilterState] = useState('All');
@@ -279,13 +281,15 @@ export const ManageLeads: React.FC<ManageLeadsProps> = ({
         <div>
           <h2 className="text-base md:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
             <Building2 className="w-5 h-5 text-blue-600" />
-            <span>Master Lead Database</span>
+            <span>{isRM ? 'Raw Leads Database' : 'Master Lead Database'}</span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 font-mono">
               {filteredLeads.length} Leads
             </span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Search, filter, allocate, or import corporate insurance tenders and client portfolios
+            {isRM
+              ? 'Raw leads database for client discovery, cold calling, and booking in-person meeting conversions'
+              : 'Search, filter, allocate, or import corporate insurance tenders and client portfolios'}
           </p>
         </div>
 

@@ -13,13 +13,14 @@ import {
   X,
   FileText
 } from 'lucide-react';
-import { CRMAccount, CRMContact, CRMLead } from '../../types/crm.types';
+import { CRMAccount, CRMContact, CRMLead, CRMUser } from '../../types/crm.types';
 import { formatINR } from '../../utils/crmStore';
 
 interface AllAccountsProps {
   accounts: CRMAccount[];
   contacts: CRMContact[];
   leads: CRMLead[];
+  currentUser?: CRMUser | null;
   onUpdateAccounts: (accounts: CRMAccount[]) => void;
 }
 
@@ -27,13 +28,27 @@ export const AllAccounts: React.FC<AllAccountsProps> = ({
   accounts,
   contacts,
   leads,
+  currentUser,
   onUpdateAccounts,
 }) => {
+  const isRM = currentUser?.role === 'RM';
+  const [accountScope, setAccountScope] = useState<'mine' | 'all'>(isRM ? 'mine' : 'all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('All');
   const [selectedAccount, setSelectedAccount] = useState<CRMAccount | null>(null);
 
-  const filteredAccounts = accounts.filter(acc => {
+  // Accounts associated with RM's leads
+  const rmAccountNames = new Set(
+    leads
+      .filter(l => l.assignedRMId === currentUser?.rmId || l.assignedRMName === currentUser?.name)
+      .map(l => l.companyName.toLowerCase())
+  );
+
+  const scopedAccounts = accountScope === 'mine' && isRM
+    ? accounts.filter(acc => rmAccountNames.has(acc.companyName.toLowerCase()) || accounts.length <= 3)
+    : accounts;
+
+  const filteredAccounts = scopedAccounts.filter(acc => {
     const matchesSearch = 
       acc.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       acc.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,15 +64,40 @@ export const AllAccounts: React.FC<AllAccountsProps> = ({
         <div>
           <h2 className="text-base md:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
             <Building2 className="w-5 h-5 text-blue-600" />
-            <span>Corporate Account Directory</span>
+            <span>{isRM ? 'My Accounts (Client Meetings Done)' : 'Corporate Account Directory'}</span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 font-mono">
               {filteredAccounts.length} Companies
             </span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Master directory of corporate clients, registered entities, pan-India offices, and active insurance covers
+            {isRM
+              ? 'Companies where initial raw lead calling resulted in completed in-person meetings and activated accounts'
+              : 'Master directory of corporate clients, registered entities, pan-India offices, and active insurance covers'}
           </p>
         </div>
+
+        {isRM && (
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold shrink-0">
+            <button
+              type="button"
+              onClick={() => setAccountScope('mine')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                accountScope === 'mine' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              My Accounts
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountScope('all')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                accountScope === 'all' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              All Corporate ({accounts.length})
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filter and Search Bar */}

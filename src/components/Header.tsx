@@ -4,7 +4,8 @@ import {
   HelpCircle,
   Crown,
   Menu,
-  User
+  User,
+  Sparkles
 } from 'lucide-react';
 import { UserProfile } from './AuthProfileModal';
 import { BharatLogo } from './BharatLogo';
@@ -13,6 +14,7 @@ interface HeaderProps {
   onOpenHelp?: () => void;
   onOpenUpgrade?: () => void;
   onOpenProfile?: () => void;
+  onOpenVisualEditor?: () => void;
   onToggleMobileMenu?: () => void;
   userProfile?: UserProfile;
 }
@@ -21,12 +23,20 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHelp,
   onOpenUpgrade,
   onOpenProfile,
+  onOpenVisualEditor,
   onToggleMobileMenu,
   userProfile,
 }) => {
   const isUserLoggedIn = Boolean(userProfile?.isLoggedIn);
   const displayName = userProfile?.name || (userProfile?.rollNumber ? `Roll #${userProfile.rollNumber}` : '');
   const initial = isUserLoggedIn && displayName ? displayName.charAt(0).toUpperCase() : null;
+
+  // Check if current user is Bharat 1 AI Platform Admin
+  const isBharatAdmin = isUserLoggedIn && (
+    userProfile?.role === 'Bharat 1 AI Admin' ||
+    userProfile?.role === 'Administrator' ||
+    userProfile?.userName?.toLowerCase() === 'raju'
+  );
 
   return (
     <header className="h-14 sm:h-16 bg-white border-b border-slate-200/90 px-2 sm:px-6 flex items-center justify-between gap-1 sm:gap-3 shrink-0 z-10 select-none w-full">
@@ -46,8 +56,21 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Actions: Bell, Upgrade Button, Profile Avatar (Guaranteed spacing so profile icon is always visible) */}
+      {/* Right Actions: Edit Website (for Bharat 1 AI Admin), Bell, Upgrade Button, Profile Avatar */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {/* Prominent Edit Website button for Bharat 1 AI Admin per Part 5 */}
+        {isBharatAdmin && onOpenVisualEditor && (
+          <button
+            type="button"
+            onClick={onOpenVisualEditor}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-red-600 to-indigo-600 hover:from-red-700 hover:to-indigo-700 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
+            title="Open Global Visual Website Editor (Bharat 1 AI Admin)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span className="hidden xs:inline">Edit Website</span>
+          </button>
+        )}
+
         {/* Notification Bell with Red Badge "3" */}
         <button
           className="relative p-1.5 sm:p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0"

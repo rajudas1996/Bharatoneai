@@ -12,19 +12,23 @@ import {
   Filter, 
   AlertCircle 
 } from 'lucide-react';
-import { CRMActivity, CRMLead } from '../../types/crm.types';
+import { CRMActivity, CRMLead, CRMUser } from '../../types/crm.types';
 
 interface FollowUpsProps {
   activities: CRMActivity[];
   leads: CRMLead[];
+  currentUser?: CRMUser | null;
   onUpdateActivities: (activities: CRMActivity[]) => void;
 }
 
 export const FollowUps: React.FC<FollowUpsProps> = ({
   activities,
   leads,
+  currentUser,
   onUpdateActivities,
 }) => {
+  const isRM = currentUser?.role === 'RM';
+  const [taskScope, setTaskScope] = useState<'mine' | 'all'>(isRM ? 'mine' : 'all');
   const [filterType, setFilterType] = useState('All');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newActivity, setNewActivity] = useState<Partial<CRMActivity>>({
@@ -34,10 +38,14 @@ export const FollowUps: React.FC<FollowUpsProps> = ({
     description: '',
     dueDate: new Date().toISOString().split('T')[0],
     priority: 'High',
-    assignedTo: 'Rahul Sharma'
+    assignedTo: currentUser?.name || 'Rahul Sharma'
   });
 
-  const filtered = activities.filter(a => filterType === 'All' || a.type === filterType);
+  const scopedActivities = taskScope === 'mine' && currentUser
+    ? activities.filter(a => a.assignedTo === currentUser.name || a.assignedTo === 'Rahul Sharma')
+    : activities;
+
+  const filtered = scopedActivities.filter(a => filterType === 'All' || a.type === filterType);
 
   const handleToggleComplete = (id: string) => {
     const updated = activities.map(a => {
@@ -97,13 +105,38 @@ export const FollowUps: React.FC<FollowUpsProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={() => setIsAddOpen(true)}
-          className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Schedule Task / Activity</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {isRM && (
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setTaskScope('mine')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  taskScope === 'mine' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                My Tasks ({activities.filter(a => a.assignedTo === currentUser?.name || a.assignedTo === 'Rahul Sharma').length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setTaskScope('all')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  taskScope === 'all' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Team ({activities.length})
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setIsAddOpen(true)}
+            className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Schedule Task / Activity</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Row */}

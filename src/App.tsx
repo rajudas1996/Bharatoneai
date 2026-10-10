@@ -51,6 +51,7 @@ import { safeStorage } from './utils/safeStorage';
 import { ProjectsView } from './components/tools/ProjectsView';
 import { SettingsView } from './components/tools/SettingsView';
 import { HelpSupportView } from './components/tools/HelpSupportView';
+import { VisualWebsiteEditorModal } from './components/VisualWebsiteEditorModal';
 import { Home, BarChart3, Sparkles, Film, Layers, Briefcase, Video } from 'lucide-react';
 
 export default function App() {
@@ -140,6 +141,7 @@ export default function App() {
 
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isVisualEditorOpen, setIsVisualEditorOpen] = useState(false);
 
   // Interactive filter state
   const [filterState, setFilterState] = useState<FilterState>({
@@ -434,10 +436,15 @@ export default function App() {
     setIsKPIBuilderOpen(true);
   }, []);
 
-  // Handle sidebar navigation clicks - direct workspace activation
+  // Handle sidebar navigation clicks - direct workspace activation with strict login guards
   const handleSelectNavTab = useCallback((tab: MainNavTab) => {
     if (tab === 'sales_crm' && !userProfile.isLoggedIn) {
       setCurrentTab('sales_crm');
+      setIsProfileOpen(true);
+      return;
+    }
+    if ((tab === 'settings' || tab === 'database_auth') && !userProfile.isLoggedIn) {
+      setCurrentTab('settings');
       setIsProfileOpen(true);
       return;
     }
@@ -466,6 +473,7 @@ export default function App() {
           onOpenHelp={() => setCurrentTab('help')}
           onOpenUpgrade={() => setIsUpgradeOpen(true)}
           onOpenProfile={() => setIsProfileOpen(true)}
+          onOpenVisualEditor={() => setIsVisualEditorOpen(true)}
           onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
           userProfile={userProfile}
         />
@@ -643,7 +651,11 @@ export default function App() {
 
           {/* 10. SETTINGS & DATABASE VAULT (Database & Auth moved under Settings with admin password raju1234) */}
           {(currentTab === 'settings' || currentTab === 'database_auth') && (
-            <SettingsView initialTab={currentTab === 'database_auth' ? 'database_auth' : 'database_auth'} />
+            <SettingsView 
+              initialTab={currentTab === 'database_auth' ? 'database' : 'crm_users'} 
+              currentUserProfile={userProfile}
+              onOpenLoginModal={() => setIsProfileOpen(true)}
+            />
           )}
 
           {/* 11. HELP & SUPPORT */}
@@ -830,6 +842,13 @@ export default function App() {
           setIsProfileOpen(false);
           setIsUpgradeOpen(true);
         }}
+      />
+
+      {/* Global Visual Website Editor Modal (Bharat 1 AI Admin) */}
+      <VisualWebsiteEditorModal
+        isOpen={isVisualEditorOpen}
+        onClose={() => setIsVisualEditorOpen(false)}
+        onElementsUpdated={() => {}}
       />
     </div>
   );
